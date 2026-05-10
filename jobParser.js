@@ -20,14 +20,21 @@ function detectJobIdFromUrl(jobUrl) {
 
   const pathParts = url.pathname.split("/").filter(Boolean);
 
-const idFromPath = pathParts.find(part =>
-  /^[a-zA-Z0-9-]{6,}$/.test(part) && /\d/.test(part)
-);
+for (const part of pathParts) {
+  const leadingNumber = part.match(/^\d{6,}/);
 
-if (idFromPath) {
-  return idFromPath;
+  if (leadingNumber) {
+    return leadingNumber[0];
+  }
+
+  if (/^[a-f0-9-]{20,}$/i.test(part)) {
+    return part;
+  }
+
+  if (/^[a-zA-Z]+-[a-zA-Z]+-\d+$/i.test(part)) {
+    return part;
+  }
 }
-
 return "";
 }
 
@@ -49,8 +56,20 @@ function detectWorkMode(bodyText) {
   return "";
 }
 
+function detectCompanyFromUrl(jobUrl) {
+  const hostname = new URL(jobUrl).hostname.replace("www.", "");
+  const parts = hostname.split(".");
+
+  const ignoredWords = ["careers", "jobs", "job", "apply", "usijobs", "india-en"];
+
+  const companyPart = parts.find(part => !ignoredWords.includes(part));
+
+  return companyPart || "";
+}
+
 
 module.exports = {
   detectJobIdFromUrl,
-  detectWorkMode
-};
+  detectWorkMode,
+  detectCompanyFromUrl
+};  

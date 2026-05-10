@@ -1,7 +1,11 @@
 const { chromium } = require("playwright");
 const { saveJob } = require("./excelService");
 const readline = require("readline-sync");
-const { detectJobIdFromUrl, detectWorkMode } = require("./jobParser");
+const {
+  detectJobIdFromUrl,
+  detectWorkMode,
+  detectCompanyFromUrl
+} = require("./jobParser");
 const jobUrl = readline.question("Enter job URL: ");
 
 
@@ -21,8 +25,10 @@ const detectedJobId = detectJobIdFromUrl(jobUrl);
 
 const detectedWorkMode = detectWorkMode(bodyText);
 
+const detectedCompany = detectCompanyFromUrl(jobUrl);
+
 const jobData = {
-  Company: readline.question("Enter company name: "),
+  Company: readline.question(`Detected company is "${detectedCompany}". Press Enter to accept or type correct company: `) || detectedCompany,
   Role: readline.question(`Detected role/title is "${pageTitle}". Press Enter to accept or type correct role: `) || pageTitle,
   Exp_required: readline.question("Enter experience required (if known): "),
   Location: readline.question("Enter location: "),
