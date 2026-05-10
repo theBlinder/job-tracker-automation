@@ -23,10 +23,9 @@ if (!job.Company.trim() || !job.Job_id.trim()) {
 }
 
 const isDuplicate = data.some(existingJob =>
-  existingJob.Company &&
-  existingJob.Job_id &&
-  String(existingJob.Company).trim().toLowerCase() === String(job.Company).trim().toLowerCase() &&
-  String(existingJob.Job_id).trim().toLowerCase() === String(job.Job_id).trim().toLowerCase()
+  existingJob.Job_link &&
+  job.Job_link &&
+  String(existingJob.Job_link).trim().toLowerCase() === String(job.Job_link).trim().toLowerCase()
 );
 
 if (isDuplicate) {

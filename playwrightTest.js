@@ -25,7 +25,8 @@ const jobData = {
   Location: "Not specified",
   Skills: "Not specified",
   Work_mode: "Not specified",
-  Job_id: jobUrl,
+  Job_id: readline.question("Enter actual Job ID if available: "),
+Job_link: jobUrl,
   Applied: "No",
   Referral_asked: "No"
 };
