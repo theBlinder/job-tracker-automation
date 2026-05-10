@@ -1,4 +1,5 @@
-function detectJobIdFromUrl(jobUrl) {
+function detectJobIdFromUrl(jobUrl) 
+{
   const url = new URL(jobUrl);
 
   const possibleParams = [
@@ -38,7 +39,26 @@ for (const part of pathParts) {
 return "";
 }
 
-function detectWorkMode(bodyText) {
+function detectPageType(jobUrl, bodyText) {
+  const url = new URL(jobUrl);
+  const text = bodyText.toLowerCase();
+
+  if (
+    url.searchParams.has("query") ||
+    url.searchParams.has("start") ||
+    text.includes("sort by") ||
+    text.includes("view job") ||
+    text.includes("search results") ||
+    text.includes("jobs found")
+  ) {
+    return "listing";
+  }
+
+  return "detail";
+}
+
+function detectWorkMode(bodyText)
+ {
   const text = bodyText.toLowerCase();
 
   if (text.includes("remote")) {
@@ -56,7 +76,43 @@ function detectWorkMode(bodyText) {
   return "";
 }
 
-function detectCompanyFromUrl(jobUrl) {
+function detectLocation(bodyText) 
+{
+  const lines = bodyText.split("\n");
+
+  const commonLocations = [
+    "Bangalore",
+    "Bengaluru",
+    "Hyderabad",
+    "Chennai",
+    "Pune",
+    "Mumbai",
+    "Delhi",
+    "Noida",
+    "Gurgaon",
+    "Kolkata",
+    "Remote",
+    "India",
+    "United States",
+    "Singapore",
+    "Poland",
+    "Germany",
+    "Hybrid"
+  ];
+
+  for (const line of lines) {
+    for (const location of commonLocations) {
+      if (line.toLowerCase().includes(location.toLowerCase())) {
+        return location;
+      }
+    }
+  }
+
+  return "";
+}
+
+function detectCompanyFromUrl(jobUrl) 
+{
   const hostname = new URL(jobUrl).hostname.replace("www.", "");
   const parts = hostname.split(".");
 
@@ -71,5 +127,7 @@ function detectCompanyFromUrl(jobUrl) {
 module.exports = {
   detectJobIdFromUrl,
   detectWorkMode,
-  detectCompanyFromUrl
+  detectCompanyFromUrl,
+  detectLocation,
+  detectPageType
 };  

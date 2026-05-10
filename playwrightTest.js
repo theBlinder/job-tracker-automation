@@ -4,10 +4,12 @@ const readline = require("readline-sync");
 const {
   detectJobIdFromUrl,
   detectWorkMode,
-  detectCompanyFromUrl
+  detectCompanyFromUrl,
+  detectLocation,
+  detectPageType
 } = require("./jobParser");
-const jobUrl = readline.question("Enter job URL: ");
 
+const jobUrl = readline.question("Enter job URL: ");
 
 async function openBrowser() {
   const browser = await chromium.launch({ headless: false });
@@ -19,6 +21,14 @@ async function openBrowser() {
 
 const bodyText = await page.locator("body").innerText();
 
+const pageType = detectPageType(jobUrl, bodyText);
+console.log("Detected page type:", pageType);
+if (pageType === "listing") {
+  console.log("Listing page detected. Extraction logic for listings will be added next.");
+  await browser.close();
+  return;
+}
+
 const lines = bodyText.split("\n");
 
 const detectedJobId = detectJobIdFromUrl(jobUrl);
@@ -27,11 +37,13 @@ const detectedWorkMode = detectWorkMode(bodyText);
 
 const detectedCompany = detectCompanyFromUrl(jobUrl);
 
+const detectedLocation = detectLocation(bodyText);
+
 const jobData = {
   Company: readline.question(`Detected company is "${detectedCompany}". Press Enter to accept or type correct company: `) || detectedCompany,
   Role: readline.question(`Detected role/title is "${pageTitle}". Press Enter to accept or type correct role: `) || pageTitle,
   Exp_required: readline.question("Enter experience required (if known): "),
-  Location: readline.question("Enter location: "),
+  Location: readline.question(`Detected location is "${detectedLocation}". Press Enter to accept or type correct location: `) || detectedLocation,
   Skills: readline.question("Enter important skills (comma separated): "),
   Work_mode: readline.question(`Detected work mode is "${detectedWorkMode}". Press Enter to accept or type correct value: `) || detectedWorkMode,
   Job_id: readline.question(`Detected Job ID is "${detectedJobId}". Press Enter to accept or type correct Job ID: `) || detectedJobId,
