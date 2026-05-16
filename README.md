@@ -1,6 +1,8 @@
+🚧 Project currently under active development.
+
 # Job Tracker Automation
 
-Job Tracker Automation is a Node.js project that helps job seekers track applications without manually updating spreadsheets after every job they apply to.
+Job Tracker Automation is a Node.js project that helps job seekers track applications without manually maintaining spreadsheets after every application.
 
 The current version takes a job URL, opens it with browser automation, detects useful job details, asks the user to confirm the data, and saves the final record locally and optionally to Google Sheets.
 
@@ -24,14 +26,14 @@ This project reduces that manual tracking effort and keeps job application recor
 - Extracts or suggests company, role, location, work mode, and job ID
 - Asks the user to confirm or correct detected values
 - Saves records to `job_applications.xlsx`
-- Prevents duplicate entries using the job link
+- Prevents duplicate job entries using validation and duplicate detection logic.
 - Optionally syncs records to Google Sheets
 
 ## Future Goal
 
 The long-term goal is to turn this into a browser extension.
 
-Instead of manually entering a job URL, the extension should automatically detect when the user is viewing a job posting, capture the job details from the page, and add the record directly to Google Sheets.
+Instead of manually entering a job URL, the extension should automatically detect when the user is viewing a job posting, capture the job details from the page, and add the record directly to Google Sheets. The focus is to reduce manual effort as much as possible during large-scale job applications.
 
 In that future version, Excel storage may be removed completely so users can manage everything from Google Sheets without maintaining a local file.
 
