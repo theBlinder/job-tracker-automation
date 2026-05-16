@@ -33,7 +33,8 @@ function detectJobIdFromUrl(jobUrl) {
   return "";
 }
 
-function detectRoleFromPage(pageTitle, bodyText, jobUrl) {
+function detectRoleFromPage(pageTitle, bodyText, jobUrl)
+ {
   const url = new URL(jobUrl);
   const pathParts = url.pathname.split("/").filter(Boolean);
 
@@ -81,8 +82,8 @@ function detectPageType(jobUrl, bodyText) {
 
   return "detail";
 }
-
-function detectRoleFromPage(pageTitle, bodyText) {
+function detectRoleFromPage(pageTitle, bodyText)
+ {
   const lines = bodyText
     .split("\n")
     .map(line => line.trim())

@@ -31,7 +31,7 @@ async function openBrowser()
   const detectedJobId = detectJobIdFromUrl(jobUrl);
   const detectedWorkMode = detectWorkMode(bodyText);
   const detectedCompanyFromUrl = detectCompanyFromUrl(jobUrl);
-  const detectedCompanyFromPage = detectCompanyFromPage(bodyText, detectedCompanyFromUrl);
+  const detectedCompanyFromPage = detectedCompanyFromUrl;
   const detectedLocation = detectLocation(bodyText);
   const detectedRole =
   detectRoleFromUrl(jobUrl) || detectRoleFromPage(pageTitle, bodyText, jobUrl);

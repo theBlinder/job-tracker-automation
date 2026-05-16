@@ -1,8 +1,14 @@
+require("dotenv").config();
 const axios = require("axios");
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyN3fNc7KhNX3Nw21SRhtJ_uI7ESLYXy4_UJ37c7CtJ9FYIh1qtfs0Y1L91PnPZjPEu/exec";
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL;
 
 async function saveToGoogleSheet(jobData) {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.log("Google Sheet URL is not configured. Skipping Google Sheet sync.");
+    return;
+  }
+
   try {
     const response = await axios.post(GOOGLE_SCRIPT_URL, jobData);
 
