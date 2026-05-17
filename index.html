@@ -2,56 +2,406 @@
 <html>
 <head>
   <title>Job Tracker</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        linear-gradient(120deg, rgba(20, 184, 166, 0.14), transparent 34%),
+        linear-gradient(315deg, rgba(37, 99, 235, 0.14), transparent 38%),
+        #f8fafc;
+      color: #172033;
+      padding: 32px 16px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 1120px;
+      min-height: calc(100vh - 64px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      align-items: start;
+      gap: 36px;
+    }
+
+    .intro {
+      position: sticky;
+      top: 32px;
+      min-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 24px 10px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 18px;
+      color: #0f766e;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 34px;
+      height: 2px;
+      background: #0f766e;
+      border-radius: 999px;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 520px;
+      color: #0f172a;
+      font-size: 48px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .highlight {
+      color: #0f766e;
+    }
+
+    .description {
+      max-width: 460px;
+      margin: 18px 0 28px;
+      color: #475569;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .note {
+      max-width: 440px;
+      margin: 0;
+      padding: 14px 0 14px 18px;
+      border-left: 3px solid #2563eb;
+      color: #334155;
+      font-size: 15px;
+      line-height: 1.7;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), transparent);
+    }
+
+    .momentum {
+      max-width: 440px;
+      margin-top: 26px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .momentum span {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.35;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+    }
+
+    .momentum span:nth-child(1) {
+      background: #2563eb;
+    }
+
+    .momentum span:nth-child(2) {
+      background: #0f766e;
+    }
+
+    .momentum span:nth-child(3) {
+      background: #7c3aed;
+    }
+
+    .container {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #dbeafe;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.13);
+    }
+
+    .form-header {
+      margin-bottom: 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .form-header h2 {
+      margin: 0 0 6px;
+      color: #1d4ed8;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .form-header p {
+      margin: 0;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 13px;
+      font-size: 15px;
+      color: #0f172a;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    input::placeholder {
+      color: #94a3b8;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.13);
+    }
+
+    button {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 6px;
+      background: linear-gradient(135deg, #2563eb, #0f766e);
+      color: #ffffff;
+      border: none;
+      padding: 13px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 800;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 34px rgba(37, 99, 235, 0.28);
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #statusMessage {
+      min-height: 20px;
+      margin: 0;
+      text-align: center;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .intro {
+        position: static;
+        min-height: auto;
+        text-align: center;
+        padding: 8px 0 0;
+      }
+
+      .eyebrow {
+        justify-content: center;
+      }
+
+      .description,
+      .note,
+      h1 {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .note {
+        text-align: left;
+      }
+
+      .momentum {
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
+    @media (max-width: 620px) {
+      body {
+        padding: 18px 12px;
+      }
+
+      .page {
+        min-height: auto;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .description {
+        font-size: 15px;
+      }
+
+      .container {
+        padding: 22px;
+        border-radius: 14px;
+      }
+
+      .momentum {
+        grid-template-columns: 1fr;
+      }
+
+      form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <h1>Job Application Tracker</h1>
+  <main class="page">
+    <section class="intro">
+      <p class="eyebrow">Career momentum</p>
+      <h1>Track every opportunity with clarity and <span class="highlight">confidence.</span></h1>
+      <p class="description">Keep your applications, referrals, job links, and next steps in one focused place so your search feels organized instead of overwhelming.</p>
+      <p class="note">Every saved role is one more step toward the work you are building for.</p>
+      <div class="momentum" aria-label="Job search momentum">
+        <span>Discover</span>
+        <span>Apply</span>
+        <span>Follow up</span>
+      </div>
+    </section>
 
-  <form>
-    <label>Company</label><br>
-    <input type="text" name="Company"><br><br>
+    <section class="container">
+      <div class="form-header">
+        <h2>Job Application Tracker</h2>
+        <p>Add the details once. Stay ready for follow-ups, referrals, and interviews.</p>
+      </div>
 
-    <label>Role</label><br>
-    <input type="text" name="Role"><br><br>
+      <form>
+        <div class="field full">
+          <label>Access Key *</label>
+          <input type="password" name="Access_key" id="accessKey" placeholder="Enter access key" required>
+        </div>
 
-    <label>Experience Required</label><br>
-    <input type="text" name="Exp_required"><br><br>
+        <div class="field">
+          <label>Company *</label>
+          <input type="text" name="Company" required placeholder="Company name">
+        </div>
 
-    <label>Location</label><br>
-    <input type="text" name="Location"><br><br>
+        <div class="field">
+          <label>Role *</label>
+          <input type="text" name="Role" required placeholder="Role title">
+        </div>
 
-    <label>Skills</label><br>
-    <input type="text" name="Skills"><br><br>
+        <div class="field">
+          <label>Experience Required</label>
+          <input type="text" name="Exp_required" placeholder="Example: 2-4 years">
+        </div>
 
-    <label>Work Mode</label><br>
-    <input type="text" name="Work_mode"><br><br>
+        <div class="field">
+          <label>Location</label>
+          <input type="text" name="Location" placeholder="City or remote">
+        </div>
 
-    <label>Job ID</label><br>
-    <input type="text" name="Job_id"><br><br>
+        <div class="field full">
+          <label>Skills</label>
+          <input type="text" name="Skills" placeholder="React, Node.js, SQL">
+        </div>
 
-    <label>Job Link</label><br>
-    <input type="text" name="Job_link"><br><br>
+        <div class="field">
+          <label>Work Mode</label>
+          <input type="text" name="Work_mode" placeholder="Remote, hybrid, onsite">
+        </div>
 
-    <label>Applied</label><br>
-    <select name="Applied">
-      <option>Yes</option>
-      <option>No</option>
-    </select><br><br>
+        <div class="field">
+          <label>Job ID *</label>
+          <input type="text" name="Job_id" required placeholder="Job reference ID">
+        </div>
 
-    <label>Referral Asked</label><br>
-    <select name="Referral_asked">
-      <option>No</option>
-      <option>Yes</option>
-    </select><br><br>
+        <div class="field full">
+          <label>Job Link *</label>
+          <input type="text" name="Job_link" required placeholder="Paste job posting URL">
+        </div>
 
-    <label>Posted Date</label><br>
-    <input type="text" name="Posted"><br><br>
+        <div class="field">
+          <label>Applied</label>
+          <select name="Applied">
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </div>
 
-   <button type="submit" id="saveButton" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-  Save Job
-</button>
-    <p id="statusMessage"></p>
-  </form>
+        <div class="field">
+          <label>Referral Asked</label>
+          <select name="Referral_asked">
+            <option>No</option>
+            <option>Yes</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label>Posted Date</label>
+          <input type="text" name="Posted" placeholder="Example: 17 May 2026">
+        </div>
+
+        <div class="field full">
+          <button type="submit" id="saveButton">
+            Save Job
+          </button>
+        </div>
+
+        <p class="field full" id="statusMessage"></p>
+      </form>
+    </section>
+  </main>
 
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhZ4kwWBGxXoscTzyNOwaznXij-KcqZJn62PhaOy4ZczlMIdpafq2H3QKcUOeft22K/exec";
@@ -109,13 +459,19 @@ jobLinkInput.addEventListener("blur", function () {
     const jobData = Object.fromEntries(formData.entries());
 
     try {
-      await fetch(SCRIPT_URL, {
+      const response = await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(jobData)
       });
 
-      statusMessage.innerText = "Job saved successfully.";
-      event.target.reset();
+      const result = await response.json();
+
+      if (result.success === true) {
+        statusMessage.innerText = "Job saved successfully.";
+        event.target.reset();
+      } else {
+        statusMessage.innerText = result.message;
+      }
     } catch (error) {
       statusMessage.innerText = "Failed to save job. Please try again.";
     }
