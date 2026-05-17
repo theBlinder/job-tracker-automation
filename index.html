@@ -201,6 +201,57 @@
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.13);
     }
 
+    .password-wrap {
+      position: relative;
+    }
+
+    .password-wrap input {
+      padding-right: 46px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      bottom: 6px;
+      width: 34px;
+      height: 34px;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #64748b;
+      cursor: pointer;
+      box-shadow: none;
+      margin: 0;
+      padding: 0;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .toggle-password:hover {
+      background: rgba(37, 99, 235, 0.09);
+      color: #1d4ed8;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .toggle-password:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    .toggle-password:focus-visible {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
+    }
+
+    .toggle-password svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+    }
+
     button {
       width: 100%;
       min-height: 48px;
@@ -326,9 +377,15 @@
       </div>
 
       <form>
-        <div class="field full">
+        <div class="field full password-wrap">
           <label>Access Key *</label>
-          <input type="password" name="Access_key" id="accessKey" placeholder="Enter access key" required>
+          <input type="password" name="Access_key" id="accessKey" required placeholder="Enter access key">
+          <button type="button" class="toggle-password" id="togglePassword" aria-label="Show access key">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="3" stroke-width="2"/>
+            </svg>
+          </button>
         </div>
 
         <div class="field">
@@ -409,11 +466,14 @@
      const form = document.querySelector("form");
   const saveButton = document.getElementById("saveButton");
   const statusMessage = document.getElementById("statusMessage");
-
+  const accessKey = document.getElementById("accessKey");
+  const togglePassword = document.getElementById("togglePassword");
+ 
   const jobLinkInput = document.querySelector('input[name="Job_link"]');
 const jobIdInput = document.querySelector('input[name="Job_id"]');
 
-function detectJobIdFromUrl(jobUrl) {
+function detectJobIdFromUrl(jobUrl) 
+{
   try {
     const url = new URL(jobUrl);
     const parts = url.pathname.split("/").filter(Boolean);
@@ -448,7 +508,16 @@ jobLinkInput.addEventListener("blur", function () {
   }
 });
 
-  form.addEventListener("submit", async function (event) {
+togglePassword.addEventListener("click", function () {
+  const isPasswordHidden = accessKey.type === "password";
+
+  accessKey.type = isPasswordHidden ? "text" : "password";
+  togglePassword.setAttribute("aria-label", isPasswordHidden ? "Hide access key" : "Show access key");
+  togglePassword.blur();
+});
+
+  form.addEventListener("submit", async function (event) 
+  {
     event.preventDefault();
 
     saveButton.disabled = true;
@@ -466,7 +535,8 @@ jobLinkInput.addEventListener("blur", function () {
 
       const result = await response.json();
 
-      if (result.success === true) {
+      if (result.success === true)
+       {
         statusMessage.innerText = "Job saved successfully.";
         event.target.reset();
       } else {
