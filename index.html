@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Job Tracker</title>
+</head>
+
+<body>
+  <h1>Job Application Tracker</h1>
+
+  <form>
+    <label>Company</label><br>
+    <input type="text" name="Company"><br><br>
+
+    <label>Role</label><br>
+    <input type="text" name="Role"><br><br>
+
+    <label>Experience Required</label><br>
+    <input type="text" name="Exp_required"><br><br>
+
+    <label>Location</label><br>
+    <input type="text" name="Location"><br><br>
+
+    <label>Skills</label><br>
+    <input type="text" name="Skills"><br><br>
+
+    <label>Work Mode</label><br>
+    <input type="text" name="Work_mode"><br><br>
+
+    <label>Job ID</label><br>
+    <input type="text" name="Job_id"><br><br>
+
+    <label>Job Link</label><br>
+    <input type="text" name="Job_link"><br><br>
+
+    <label>Applied</label><br>
+    <select name="Applied">
+      <option>Yes</option>
+      <option>No</option>
+    </select><br><br>
+
+    <label>Referral Asked</label><br>
+    <select name="Referral_asked">
+      <option>No</option>
+      <option>Yes</option>
+    </select><br><br>
+
+    <label>Posted Date</label><br>
+    <input type="text" name="Posted"><br><br>
+
+    <button type="submit">Save Job</button>
+  </form>
+
+  <script>
+
+GOOGLE_SCRIPT_URL="https://script.google.com/macros/s/AKfycbyhZ4kwWBGxXoscTzyNOwaznXij-KcqZJn62PhaOy4ZczlMIdpafq2H3QKcUOeft22K/exec";
+
+    document.querySelector("form").addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const formData = new FormData(event.target);
+      const jobData = Object.fromEntries(formData.entries());
+
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(jobData)
+      });
+
+      alert("Job saved successfully!");
+      event.target.reset();
+    });
+  </script>
+</body>
+</html>

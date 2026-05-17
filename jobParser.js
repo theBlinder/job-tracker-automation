@@ -1,4 +1,5 @@
-function detectJobIdFromUrl(jobUrl) {
+function detectJobIdFromUrl(jobUrl)
+ {
   const url = new URL(jobUrl);
   const pathParts = url.pathname.split("/").filter(Boolean);
 
@@ -6,9 +7,8 @@ function detectJobIdFromUrl(jobUrl) {
     const underscoreId = part.match(/_([A-Za-z0-9-]{4,})$/);
     if (underscoreId) return underscoreId[1];
 
-    const leadingNumber = part.match(/^\d{6,}/);
-    if (leadingNumber) return leadingNumber[0];
-
+  const alphaNumericId = part.match(/^(?=.*\d)[A-Za-z0-9-]{6,}$/);
+if (alphaNumericId) return alphaNumericId[0];
     if (/^[a-f0-9-]{20,}$/i.test(part)) return part;
 
     if (/^[a-zA-Z]+-[a-zA-Z]+-\d+$/i.test(part)) return part;
