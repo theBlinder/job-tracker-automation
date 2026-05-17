@@ -3,95 +3,62 @@ const { saveJob } = require("./excelService");
 const { saveToGoogleSheet } = require("./googleSheetService");
 const readline = require("readline-sync");
 
-const 
-{
+const {
   detectJobIdFromUrl,
-  detectWorkMode,
   detectCompanyFromUrl,
-  detectCompanyFromPage,
-  detectLocation,
   detectPageType,
-  detectRoleFromPage,
   detectRoleFromUrl
 } = require("./jobParser");
 
 const jobUrl = readline.question("Enter job URL: ");
 
-async function openBrowser() 
-{
+function askWithSuggestion(label, suggestedValue) {
+  if (!suggestedValue) {
+    return readline.question(`Enter ${label}: `);
+  }
+
+  return (
+    readline.question(
+      `Detected ${label} is "${suggestedValue}". Press Enter to accept or type correct ${label}: `
+    ) || suggestedValue
+  );
+}
+
+async function openBrowser() {
   const browser = await chromium.launch({ headless: false });
   const page = await browser.newPage();
 
-  await page.goto(jobUrl, { waitUntil: "domcontentloaded" });
+  try {
+    await page.goto(jobUrl, { waitUntil: "domcontentloaded" });
 
-  const pageTitle = await page.title();
-  const bodyText = await page.locator("body").innerText();
+    const bodyText = await page.locator("body").innerText().catch(() => "");
 
-  const pageType = detectPageType(jobUrl, bodyText);
-  const detectedJobId = detectJobIdFromUrl(jobUrl);
-  const detectedWorkMode = detectWorkMode(bodyText);
-  const detectedCompanyFromUrl = detectCompanyFromUrl(jobUrl);
-  const detectedCompanyFromPage = detectedCompanyFromUrl;
-  const detectedLocation = detectLocation(bodyText);
-  const detectedRole =
-  detectRoleFromUrl(jobUrl) || detectRoleFromPage(pageTitle, bodyText, jobUrl);
+    const pageType = detectPageType(jobUrl, bodyText);
+    const detectedJobId = detectJobIdFromUrl(jobUrl);
+    const detectedCompany = detectCompanyFromUrl(jobUrl);
+    const detectedRole = detectRoleFromUrl(jobUrl);
 
-  console.log("Detected page type:", pageType);
+    console.log("Detected page type:", pageType);
 
-  if (pageType === "listing") 
-    {
-    const firstJobCardText = await page
-      .getByRole("button", { name: /View job:/ })
-      .first()
-      .innerText();
-
-    const cardLines = firstJobCardText.split("\n");
-
-    const listingRole = cardLines[0] || detectedRole;
-    const listingLocation = cardLines[1] || detectedLocation;
-    const listingPosted = cardLines[2] || "";
-
-    const listingJobData = 
-    {
-      Company: readline.question(`Detected company is "${detectedCompanyFromPage}". Press Enter to accept or type correct company: `) || detectedCompanyFromPage,
-      Role: readline.question(`Detected role/title is "${listingRole}". Press Enter to accept or type correct role: `) || listingRole,
-      Exp_required: readline.question("Enter experience required (if known): "),
-      Location: readline.question(`Detected location is "${listingLocation}". Press Enter to accept or type correct location: `) || listingLocation,
-      Skills: readline.question("Enter important skills (comma separated): "),
-      Work_mode: readline.question(`Detected work mode is "${detectedWorkMode}". Press Enter to accept or type correct value: `) || detectedWorkMode,
-      Job_id: readline.question(`Detected Job ID is "${detectedJobId}". Press Enter to accept or type correct Job ID: `) || detectedJobId,
+    const jobData = {
+      Company: askWithSuggestion("company", detectedCompany),
+      Role: askWithSuggestion("role/title", detectedRole),
+      Exp_required: readline.question("Enter experience required: "),
+      Location: readline.question("Enter location: "),
+      Skills: readline.question("Enter important skills, comma separated: "),
+      Work_mode: readline.question("Enter work mode, if known: "),
+      Job_id: askWithSuggestion("Job ID", detectedJobId),
       Job_link: jobUrl,
       Applied: readline.question("Have you applied? Yes/No: "),
       Referral_asked: readline.question("Asked for referral? Yes/No: "),
-      Posted: listingPosted
+      Posted: readline.question("Enter posting date, if known: ")
     };
 
-    saveJob(listingJobData);
-    await saveToGoogleSheet(listingJobData);
-
+    saveJob(jobData);
+    await saveToGoogleSheet(jobData);
+  } finally {
     await browser.close();
-    return;
   }
-
-  const jobData = 
-  {
-    Company: readline.question(`Detected company is "${detectedCompanyFromPage}". Press Enter to accept or type correct company: `) || detectedCompanyFromPage,
-    Role: readline.question(`Detected role/title is "${detectedRole}". Press Enter to accept or type correct role: `) || detectedRole,
-    Exp_required: readline.question("Enter experience required (if known): "),
-    Location: readline.question(`Detected location is "${detectedLocation}". Press Enter to accept or type correct location: `) || detectedLocation,
-    Skills: readline.question("Enter important skills (comma separated): "),
-    Work_mode: readline.question(`Detected work mode is "${detectedWorkMode}". Press Enter to accept or type correct value: `) || detectedWorkMode,
-    Job_id: readline.question(`Detected Job ID is "${detectedJobId}". Press Enter to accept or type correct Job ID: `) || detectedJobId,
-    Job_link: jobUrl,
-    Applied: readline.question("Have you applied? Yes/No: "),
-    Referral_asked: readline.question("Asked for referral? Yes/No: "),
-    Posted: readline.question("Enter posting date (if known): ")
-  };
-
-  saveJob(jobData);
-  await saveToGoogleSheet(jobData);
-
-  await browser.close();
 }
 
 openBrowser();
