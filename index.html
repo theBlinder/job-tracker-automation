@@ -47,27 +47,44 @@
     <label>Posted Date</label><br>
     <input type="text" name="Posted"><br><br>
 
-    <button type="submit">Save Job</button>
+   <button type="submit" id="saveButton" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+  Save Job
+</button>
+    <p id="statusMessage"></p>
   </form>
 
   <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhZ4kwWBGxXoscTzyNOwaznXij-KcqZJn62PhaOy4ZczlMIdpafq2H3QKcUOeft22K/exec";
 
-GOOGLE_SCRIPT_URL="https://script.google.com/macros/s/AKfycbyhZ4kwWBGxXoscTzyNOwaznXij-KcqZJn62PhaOy4ZczlMIdpafq2H3QKcUOeft22K/exec";
+     const form = document.querySelector("form");
+  const saveButton = document.getElementById("saveButton");
+  const statusMessage = document.getElementById("statusMessage");
 
-    document.querySelector("form").addEventListener("submit", async function (event) {
-      event.preventDefault();
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
 
-      const formData = new FormData(event.target);
-      const jobData = Object.fromEntries(formData.entries());
+    saveButton.disabled = true;
+    saveButton.innerText = "Saving...";
+    statusMessage.innerText = "Saving job, please wait...";
 
+    const formData = new FormData(event.target);
+    const jobData = Object.fromEntries(formData.entries());
+
+    try {
       await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(jobData)
       });
 
-      alert("Job saved successfully!");
+      statusMessage.innerText = "Job saved successfully.";
       event.target.reset();
-    });
+    } catch (error) {
+      statusMessage.innerText = "Failed to save job. Please try again.";
+    }
+
+    saveButton.disabled = false;
+    saveButton.innerText = "Save Job";
+  });
   </script>
 </body>
 </html>
