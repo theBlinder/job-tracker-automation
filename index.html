@@ -287,6 +287,23 @@
       color: #475569;
       font-size: 14px;
       line-height: 1.5;
+      padding: 10px 12px;
+      border-radius: 10px;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+
+    #statusMessage:empty {
+      padding: 0;
+    }
+
+    #statusMessage.success {
+      color: #15803d;
+      background: rgba(21, 128, 61, 0.09);
+    }
+
+    #statusMessage.error {
+      color: #dc2626;
+      background: rgba(220, 38, 38, 0.09);
     }
 
     @media (max-width: 900px) {
@@ -455,7 +472,7 @@
           </button>
         </div>
 
-        <p class="field full" id="statusMessage"></p>
+        <p class="field full" id="statusMessage" aria-live="polite"></p>
       </form>
     </section>
   </main>
@@ -463,16 +480,16 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhZ4kwWBGxXoscTzyNOwaznXij-KcqZJn62PhaOy4ZczlMIdpafq2H3QKcUOeft22K/exec";
 
-     const form = document.querySelector("form");
-  const saveButton = document.getElementById("saveButton");
-  const statusMessage = document.getElementById("statusMessage");
-  const accessKey = document.getElementById("accessKey");
-  const togglePassword = document.getElementById("togglePassword");
- 
-  const jobLinkInput = document.querySelector('input[name="Job_link"]');
+const form = document.querySelector("form");
+const saveButton = document.getElementById("saveButton");
+const statusMessage = document.getElementById("statusMessage");
+const accessKey = document.getElementById("accessKey");
+const togglePassword = document.getElementById("togglePassword");
+
+const jobLinkInput = document.querySelector('input[name="Job_link"]');
 const jobIdInput = document.querySelector('input[name="Job_id"]');
 
-function detectJobIdFromUrl(jobUrl) 
+function detectJobIdFromUrl(jobUrl)
 {
   try {
     const url = new URL(jobUrl);
@@ -500,12 +517,27 @@ function detectJobIdFromUrl(jobUrl)
   }
 }
 
-jobLinkInput.addEventListener("blur", function () {
+function setStatusMessage(message, type)
+{
+  statusMessage.innerText = message;
+  statusMessage.classList.remove("success", "error");
+
+  if (type) {
+    statusMessage.classList.add(type);
+  }
+}
+
+form.addEventListener("input", function () {
+  if (!saveButton.disabled) {
+    setStatusMessage("", "");
+  }
+});
+
+jobLinkInput.addEventListener("input", function () 
+{
   const detectedJobId = detectJobIdFromUrl(jobLinkInput.value);
 
-  if (detectedJobId && !jobIdInput.value) {
-    jobIdInput.value = detectedJobId;
-  }
+  jobIdInput.value = detectedJobId || "";
 });
 
 togglePassword.addEventListener("click", function () {
@@ -522,7 +554,7 @@ togglePassword.addEventListener("click", function () {
 
     saveButton.disabled = true;
     saveButton.innerText = "Saving...";
-    statusMessage.innerText = "Saving job, please wait...";
+    setStatusMessage("Saving job, please wait...", "");
 
     const formData = new FormData(event.target);
     const jobData = Object.fromEntries(formData.entries());
@@ -537,13 +569,15 @@ togglePassword.addEventListener("click", function () {
 
       if (result.success === true)
        {
-        statusMessage.innerText = "Job saved successfully.";
+        setStatusMessage("Job saved successfully.", "success");
+        const currentAccessKey = accessKey.value;
         event.target.reset();
+      accessKey.value = currentAccessKey;
       } else {
-        statusMessage.innerText = result.message;
+        setStatusMessage(result.message || "Failed to save job. Please check the details and try again.", "error");
       }
     } catch (error) {
-      statusMessage.innerText = "Failed to save job. Please try again.";
+      setStatusMessage("Failed to save job. Please try again.", "error");
     }
 
     saveButton.disabled = false;
