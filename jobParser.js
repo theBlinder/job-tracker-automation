@@ -186,14 +186,112 @@ function detectLocation(bodyText)
 
 function detectCompanyFromUrl(jobUrl) 
 {
-  const hostname = new URL(jobUrl).hostname.replace("www.", "");
-  const parts = hostname.split(".");
+  try {
+    const parsedUrl = new URL(jobUrl);
+    const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./, "");
 
-  const ignoredWords = ["careers", "jobs", "job", "apply", "usijobs", "india-en"];
+    const ignoredWords = new Set([
+      "www",
+      "com",
+      "org",
+      "net",
+      "io",
+      "co",
+      "in",
+      "us",
+      "uk",
+      "ca",
+      "au",
+      "de",
+      "fr",
+      "eu",
+      "careers",
+      "career",
+      "jobs",
+      "job",
+      "apply",
+      "application",
+      "applicant",
+      "candidate",
+      "candidates",
+      "hiring",
+      "hire",
+      "recruiting",
+      "recruitment",
+      "recruit",
+      "talent",
+      "join",
+      "work",
+      "employment",
+      "opportunities",
+      "opening",
+      "openings",
+      "positions",
+      "position",
+      "details",
+      "description",
+      "search",
+      "listing",
+      "listings",
+      "portal",
+      "ats",
+      "hr",
+      "people",
+      "workday",
+      "myworkdayjobs",
+      "greenhouse",
+      "lever",
+      "ashbyhq",
+      "workable",
+      "smartrecruiters",
+      "icims",
+      "successfactors",
+      "oraclecloud",
+      "taleo",
+      "bamboohr",
+      "jobvite",
+      "eightfold",
+      "teamtailor",
+      "recruitee",
+      "boards",
+      "board",
+      "wd1",
+      "wd3",
+      "wd5",
+      "myjobs",
+      "india",
+      "india-en",
+      "en",
+      "en-us",
+      "en-gb",
+      "usijobs"
+    ]);
 
-  const companyPart = parts.find(part => !ignoredWords.includes(part));
+    function getCleanParts(value) {
+      return value
+        .toLowerCase()
+        .split(/[./_-]+/)
+        .map(part => part.trim())
+        .filter(Boolean)
+        .filter(part => !ignoredWords.has(part))
+        .filter(part => !/^\d+$/.test(part))
+        .filter(part => part.length > 1);
+    }
 
-  return companyPart || "";
+    const hostnameParts = getCleanParts(hostname);
+    const hostnameCompany = hostnameParts[0];
+
+    if (hostnameCompany) {
+      return hostnameCompany;
+    }
+
+    const pathParts = getCleanParts(parsedUrl.pathname);
+    const pathCompany = pathParts[0];
+
+    return pathCompany || "";
+  } catch {
+    return "";
+  }
 }
 
 function isNoiseLine(line)
