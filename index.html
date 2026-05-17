@@ -60,6 +60,44 @@
   const saveButton = document.getElementById("saveButton");
   const statusMessage = document.getElementById("statusMessage");
 
+  const jobLinkInput = document.querySelector('input[name="Job_link"]');
+const jobIdInput = document.querySelector('input[name="Job_id"]');
+
+function detectJobIdFromUrl(jobUrl) {
+  try {
+    const url = new URL(jobUrl);
+    const parts = url.pathname.split("/").filter(Boolean);
+
+    for (const part of parts) {
+      const idMatch = part.match(/^(?=.*\d)[A-Za-z0-9-]{6,}$/);
+      if (idMatch) {
+        return idMatch[0];
+      }
+    }
+
+    const params = ["jobReferenceCode", "id", "jobId", "jobID", "reqId", "requisitionId", "wdjobreqid", "referenceCode"];
+
+    for (const param of params) {
+      const value = url.searchParams.get(param);
+      if (value) {
+        return value;
+      }
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+jobLinkInput.addEventListener("blur", function () {
+  const detectedJobId = detectJobIdFromUrl(jobLinkInput.value);
+
+  if (detectedJobId && !jobIdInput.value) {
+    jobIdInput.value = detectedJobId;
+  }
+});
+
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
 
