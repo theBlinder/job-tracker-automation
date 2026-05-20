@@ -2,92 +2,85 @@
 
 # Job Tracker Automation
 
-Job Tracker Automation is a Node.js and web-form project for recording job applications in a consistent format. It helps reduce the manual work of copying job links, job IDs, company names, roles, referral status, and application status into a spreadsheet after each application.
+Job Tracker Automation is a lightweight job-application tracker with two stable workflows:
 
-## Problem Statement
+1. A hosted GitHub Pages web form for quick desktop or mobile entry.
+2. A local Playwright terminal flow that opens a job link, suggests detected values, and saves the record locally.
 
-During an active job search, application details are often spread across browser tabs, job portals, notes, and spreadsheets. This makes it easy to lose track of which roles were applied to, which links need follow-up, and whether a referral was requested.
+Hosted form: https://theblinder.github.io/job-tracker-automation/
 
-This project exists to make that tracking process more reliable and less repetitive while keeping the data in a Google Sheet or local Excel file.
+## What It Does
 
-## Current Architecture
+- Records job applications with company, role, experience, location, skills, work mode, job ID, job link, application status, referral status, and posted date.
+- Submits the hosted form to Google Apps Script, which writes to Google Sheets.
+- Keeps access-key validation in Google Apps Script instead of trusting browser-side checks.
+- Auto-fills the Job ID field from common job-link URL patterns.
+- Prevents duplicate records in Google Sheets through the Apps Script backend.
+- Supports local Excel saving through the Playwright terminal flow.
 
-The project currently supports two workflows for recording job applications:
-
-1. A Playwright-based terminal workflow that opens a job URL, suggests some detected values, asks for confirmation, saves to Excel, and can also sync to Google sheets.
-2. A hosted responsive web form that submits job application details directly to a Google Apps Script endpoint connected to Google Sheets.
+## Project Structure
 
 ```text
 job-tracker-automation/
-|-- index.html              # Responsive hosted web form
-|-- playwrightTest.js       # Playwright terminal automation flow
-|-- jobParser.js            # URL and page-detail detection helpers
-|-- excelService.js         # Local Excel storage and duplicate checks
+|-- index.html              # Hosted responsive web form
+|-- playwrightTest.js       # Local Playwright terminal workflow
+|-- jobParser.js            # Job URL parsing helpers
+|-- excelService.js         # Local Excel saving and duplicate checks
 |-- googleSheetService.js   # Optional Google Sheets sync for terminal flow
 |-- jobTracker.js           # Basic manual terminal entry flow
 |-- package.json            # Node.js dependencies
 `-- README.md
 ```
 
-## Usage Flow 1: Playwright Terminal Automation
+## Hosted Web Form
 
-The terminal flow is useful when you want the app to open a job posting and assist with data entry.
+The web form is designed for fast manual entry from desktop or mobile.
 
-How it works:
+Use it here:
 
-1. Run the Playwright script.
-2. Paste a job URL in the terminal.
-3. Playwright opens the page in Chromium.
-4. The parser attempts to detect the page type, company, role, and job ID from the URL and page content.
-5. The terminal prompts you to accept or correct detected values.
-6. The record is saved to `job_applications.xlsx`.
-7. If `GOOGLE_SCRIPT_URL` is configured, the same record is also submitted to Google Sheets.
+https://theblinder.github.io/job-tracker-automation/
 
-## Usage Flow 2: Hosted Web Form
+The form posts job data to a deployed Google Apps Script web app. The Apps Script endpoint is responsible for validating the access key, checking for duplicates, and writing accepted records to Google Sheets.
 
-The hosted form can be used from desktop or mobile browsers.
-The hosted form in `index.html` is designed for quick manual entry from a browser. It can be deployed as a static page and connected to a Google Apps Script web app.
+When a job link is entered, the form tries to detect a Job ID from the URL path or known query parameters. If a match is found, the Job ID field is filled automatically.
 
-The form captures:
+## Mobile Usage
 
-- Company
-- Role
-- Experience required
-- Location
-- Skills
-- Work mode
-- Job ID
-- Job link
-- Applied status
-- Referral status
-- Posted date
-- Access key
+The hosted form is responsive and works as a single-column layout on smaller screens. This makes it usable directly from a phone while browsing job postings.
 
-When a job link is pasted into the form, the page attempts to detect a Job ID from the URL path or common query parameters. If the Job ID field is empty, it is filled automatically when the job link field loses focus.
+Typical mobile flow:
 
-The UI is responsive and adapts from a two-column desktop layout to a single-column mobile layout.
+1. Open the hosted form.
+2. Paste the job link.
+3. Review or edit the auto-filled Job ID.
+4. Fill the required fields.
+5. Enter the access key.
+6. Submit the job.
 
-## Google Sheets Integration
+## Google Apps Script + Google Sheets
 
-Google Sheets integration is handled through a deployed Google Apps Script web app.
+Google Sheets integration is handled by Google Apps Script.
 
-For the terminal flow, set `GOOGLE_SCRIPT_URL` in your environment or `.env` file:
+The browser form sends a JSON payload to the Apps Script web app URL configured in `index.html`.
+
+The Apps Script backend should handle:
+
+- Access-key validation
+- Duplicate prevention
+- Writing valid job records to Google Sheets
+- Returning a JSON response to the form
+
+The local Playwright flow can also submit to Google Sheets when `GOOGLE_SCRIPT_URL` is configured.
+
+Create a `.env` file:
 
 ```env
 GOOGLE_SCRIPT_URL=your-google-apps-script-web-app-url
 ```
 
-If the variable is not set, the terminal flow still saves records locally to Excel and skips Google Sheets sync.
+If `GOOGLE_SCRIPT_URL` is not set, the Playwright flow still saves to the local Excel file and skips Google Sheets sync.
 
-For the hosted web form, `index.html` sends a JSON payload to the configured Apps Script URL using `fetch`.
-
-## Access-Key Protected Submissions
-
-The hosted form includes an `Access_key` field. This value is submitted with the job data so the Google Apps Script endpoint can validate the request before writing to the sheet.
-
-Access-key validation should be enforced in the Apps Script backend, not only in the browser.
-
-## Setup
+## Local Playwright Terminal Flow
 
 Install dependencies:
 
@@ -101,28 +94,36 @@ Install Playwright browsers:
 npx playwright install
 ```
 
-Create a `.env` file if you want terminal submissions to sync with Google Sheets:
-
-```env
-GOOGLE_SCRIPT_URL=your-google-apps-script-web-app-url
-```
-
-Run the Playwright terminal flow:
+Run the Playwright workflow:
 
 ```bash
 node playwrightTest.js
 ```
 
-Run the basic manual terminal flow:
+Flow:
+
+1. Paste a job URL in the terminal.
+2. Playwright opens the page in Chromium.
+3. The script attempts to detect page type, company, role, and Job ID.
+4. The terminal asks you to accept or correct detected values.
+5. The record is saved to `job_applications.xlsx`.
+6. If configured, the record is also sent to Google Apps Script.
+
+The local Excel flow prevents duplicate entries by comparing existing job links before saving.
+
+## Basic Manual Terminal Flow
+
+Run:
 
 ```bash
 node jobTracker.js
 ```
 
-To use the hosted form, deploy `index.html` with any static hosting provider and configure its `SCRIPT_URL` value to point to your deployed Google Apps Script endpoint.
+This provides a simpler manual-entry terminal flow.
 
 ## Tech Stack
 
+- HTML, CSS, and browser `fetch`
 - JavaScript
 - Node.js
 - Playwright
@@ -130,15 +131,18 @@ To use the hosted form, deploy `index.html` with any static hosting provider and
 - Axios
 - dotenv
 - readline-sync
-- HTML, CSS, and browser `fetch`
-- Google Sheets through Google Apps Script
+- Google Apps Script
+- Google Sheets
 
 ## Known Limitations
 
-- Job detail detection depends on each job portal's URL and page structure.
-- The Playwright flow still requires user confirmation and manual correction.
-- The hosted form relies on the Google Apps Script endpoint for validation and sheet writes.
+- Job detail detection depends on each job portal's URL format and page structure.
+- The Playwright flow still needs manual review and correction.
+- The hosted form depends on the deployed Apps Script endpoint being available.
+- Browser-side Job ID detection is best-effort and may not work for every posting.
+- Access-key validation and Google Sheets duplicate prevention are enforced in Apps Script, so the backend must stay in sync with the form fields.
 - Automated tests are not currently included.
+- The repository includes local Excel storage, but Google Sheets is the primary hosted-form storage path.
 
 ## License
 
