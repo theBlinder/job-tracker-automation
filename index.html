@@ -96,63 +96,29 @@
     .momentum {
   max-width: 440px;
   margin-top: 26px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   color: #334155;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .momentum span {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 9px;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.35;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.01em;
 }
 
-.momentum span::before {
-  content: "";
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: #ffffff;
-  border: 2px solid #0ea5e9;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.09);
-}
-
-.momentum span::after {
-  content: "⟶";
-  position: absolute;
-  top: 14px;
-  left: 100%;
-  transform: translate(-50%, -50%);
-  color: rgba(15, 118, 110, 0.28);
-  font-size: 54px;
-  font-weight: 400;
+.momentum span:not(:last-child)::after {
+  content: "→";
+  color: #0f766e;
+  font-size: 18px;
+  font-weight: 700;
   line-height: 1;
-}
-
-.momentum span:last-child::after {
-  display: none;
-}
-
-.momentum span:nth-child(1)::before {
-  border-color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.1);
-}
-
-.momentum span:nth-child(2)::before {
-  border-color: #f97316;
-  background: rgba(249, 115, 22, 0.1);
-}
-
-.momentum span:nth-child(3)::before {
-  border-color: #16a34a;
-  background: rgba(22, 163, 74, 0.1);
+  transform: translateY(-1px);
 }
 
     .container {
