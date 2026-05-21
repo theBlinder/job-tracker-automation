@@ -128,7 +128,7 @@ function detectWorkMode(bodyText)
   }
 
   if (text.includes("onsite")) {
-    return "Onsite";
+    return "On site";
   }
 
   return "";
