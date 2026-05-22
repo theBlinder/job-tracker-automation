@@ -40,9 +40,23 @@ async function openBrowser() {
 
     console.log("Detected page type:", pageType);
 
+    const statusOptions = [
+      "Saved",
+      "Applied",
+      "Referral Requested",
+      "Interview Scheduled",
+      "Rejected",
+      "Offer"
+    ];
+
+    const statusIndex = readline.keyInSelect(statusOptions, "Select status:", {
+      cancel: false
+    });
+
     const jobData = {
       Company: askWithSuggestion("company", detectedCompany),
       Role: askWithSuggestion("role/title", detectedRole),
+      Status: statusOptions[statusIndex],
       Exp_required: readline.question("Enter experience required: "),
       Location: readline.question("Enter location: "),
       Skills: readline.question("Enter important skills, comma separated: "),
