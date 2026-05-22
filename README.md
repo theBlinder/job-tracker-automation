@@ -11,7 +11,7 @@ Hosted form: https://theblinder.github.io/job-tracker-automation/
 
 ## What It Does
 
-- Records job applications with company, role, experience, location, skills, work mode, job ID, job link, application status, referral status, and posted date.
+- Records job applications with company, role, experience, location, skills, work mode, job ID, job link, application status, and referral status.
 - Submits the hosted form to Google Apps Script, which writes to Google Sheets.
 - Keeps access-key validation in Google Apps Script instead of trusting browser-side checks.
 - Auto-fills the Job ID field from common job-link URL patterns.

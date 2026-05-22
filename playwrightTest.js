@@ -65,7 +65,7 @@ async function openBrowser() {
       Job_link: jobUrl,
       Applied: readline.question("Have you applied? Yes/No: "),
       Referral_asked: readline.question("Asked for referral? Yes/No: "),
-      Posted: readline.question("Enter posting date, if known: ")
+      
     };
 
     saveJob(jobData);
