@@ -439,7 +439,7 @@
 
         <div class="field full">
           <label>Job Link *</label>
-          <input type="text" name="Job_link" required placeholder="Paste job posting URL">
+          <input type="text" id="jobLink" name="Job_link" required placeholder="Paste job posting URL">
         </div>
 
         <div class="field">
@@ -595,6 +595,21 @@ togglePassword.addEventListener("click", function () {
     saveButton.disabled = false;
     saveButton.innerText = "Save Job";
   });
+  
+  window.addEventListener("DOMContentLoaded", () => 
+  {
+    const params = new URLSearchParams(window.location.search);
+    const jobLinkFromUrl = params.get("jobLink");
+
+    if (jobLinkFromUrl) {
+      const jobLinkInput = document.getElementById("jobLink");
+
+      if (jobLinkInput) {
+        jobLinkInput.value = jobLinkFromUrl.trim();
+      }
+    }
+  });
+
   </script>
 </body>
 </html>
