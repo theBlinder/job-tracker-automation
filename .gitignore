@@ -2,3 +2,5 @@ node_modules
 job_applications.xlsx
 ~$job_applications.xlsx
 .env
+credentials.json
+service-account.json
