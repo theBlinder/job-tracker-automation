@@ -479,6 +479,12 @@
         </div>
 
         <div class="field full">
+          <button type="button" id="extractButton">
+           Extract Details
+          </button>
+        </div>
+
+        <div class="field full">
           <button type="submit" id="saveButton">
             Save Job
           </button>
@@ -494,6 +500,7 @@
 
 const form = document.querySelector("form");
 const saveButton = document.getElementById("saveButton");
+const extractButton = document.getElementById("extractButton");
 const statusMessage = document.getElementById("statusMessage");
 const accessKey = document.getElementById("accessKey");
 const togglePassword = document.getElementById("togglePassword");
@@ -552,13 +559,14 @@ jobLinkInput.addEventListener("input", function ()
   jobIdInput.value = detectedJobId || "";
 });
 
-togglePassword.addEventListener("click", function () {
+togglePassword.addEventListener("click", function () 
+    {
   const isPasswordHidden = accessKey.type === "password";
 
   accessKey.type = isPasswordHidden ? "text" : "password";
   togglePassword.setAttribute("aria-label", isPasswordHidden ? "Hide access key" : "Show access key");
   togglePassword.blur();
-});
+    });
 
   form.addEventListener("submit", async function (event) 
   {
@@ -609,6 +617,50 @@ togglePassword.addEventListener("click", function () {
       }
     }
   });
+
+  extractButton.addEventListener("click", async function () {
+  const jobLink = jobLinkInput.value.trim();
+
+  if (!jobLink) {
+    setStatusMessage("Please paste a job link first.", "error");
+    return;
+  }
+
+  extractButton.disabled = true;
+  extractButton.innerText = "Extracting...";
+  setStatusMessage("Extracting job details, please wait...", "");
+
+  try {
+    const response = await fetch("/extract", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ jobLink })
+    });
+
+    const result = await response.json();
+
+    if (result.success === true) {
+      const data = result.data;
+
+      document.querySelector('input[name="Company"]').value = data.company || "";
+      document.querySelector('input[name="Role"]').value = data.role || "";
+      document.querySelector('input[name="Location"]').value = data.location || "";
+      document.querySelector('input[name="Exp_required"]').value = data.experience || "";
+      document.querySelector('input[name="Job_id"]').value = data.jobId || "";
+
+      setStatusMessage("Job details extracted. Please review before saving.", "success");
+    } else {
+      setStatusMessage(result.message || "Could not extract job details.", "error");
+    }
+  } catch (error) {
+    setStatusMessage("Extraction failed. Please try again.", "error");
+  }
+
+  extractButton.disabled = false;
+  extractButton.innerText = "Extract Details";
+});
 
   </script>
 </body>
