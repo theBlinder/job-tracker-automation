@@ -480,7 +480,7 @@
 
         <div class="field full">
           <button type="button" id="extractButton">
-           Extract Details
+           Extract from pasted link
           </button>
         </div>
 
@@ -507,6 +507,10 @@ const togglePassword = document.getElementById("togglePassword");
 
 const jobLinkInput = document.querySelector('input[name="Job_link"]');
 const jobIdInput = document.querySelector('input[name="Job_id"]');
+
+function isLocalTracker() {
+  return ["localhost", "127.0.0.1"].includes(window.location.hostname);
+}
 
 function detectJobIdFromUrl(jobUrl)
 {
@@ -603,22 +607,8 @@ togglePassword.addEventListener("click", function ()
     saveButton.disabled = false;
     saveButton.innerText = "Save Job";
   });
-  
-  window.addEventListener("DOMContentLoaded", () => 
-  {
-    const params = new URLSearchParams(window.location.search);
-    const jobLinkFromUrl = params.get("jobLink");
 
-    if (jobLinkFromUrl) {
-      const jobLinkInput = document.getElementById("jobLink");
-
-      if (jobLinkInput) {
-        jobLinkInput.value = jobLinkFromUrl.trim();
-      }
-    }
-  });
-
-  extractButton.addEventListener("click", async function () {
+async function extractDetailsFromJobLink() {
   const jobLink = jobLinkInput.value.trim();
 
   if (!jobLink) {
@@ -649,18 +639,76 @@ togglePassword.addEventListener("click", function ()
       document.querySelector('input[name="Location"]').value = data.location || "";
       document.querySelector('input[name="Exp_required"]').value = data.experience || "";
       document.querySelector('input[name="Job_id"]').value = data.jobId || "";
+      document.querySelector('input[name="Skills"]').value = data.skills || "";
+      document.querySelector('input[name="Work_mode"]').value = data.workMode || "";
 
       setStatusMessage("Job details extracted. Please review before saving.", "success");
     } else {
       setStatusMessage(result.message || "Could not extract job details.", "error");
     }
   } catch (error) {
-    setStatusMessage("Extraction failed. Please try again.", "error");
+    setStatusMessage("Pasted-link extraction needs the local server. For mobile, open the job page and use the bookmarklet.", "error");
   }
 
   extractButton.disabled = false;
   extractButton.innerText = "Extract Details";
-});
+}
+
+function fillField(name, value) {
+  const field = document.querySelector(`[name="${name}"]`);
+
+  if (field && value) {
+    field.value = value.trim();
+  }
+}
+
+function fillFormFromBookmarkletParams(params) {
+  const fieldMap = {
+    Company: ["Company", "company"],
+    Role: ["Role", "role"],
+    Exp_required: ["Exp_required", "experience"],
+    Location: ["Location", "location"],
+    Skills: ["Skills", "skills"],
+    Work_mode: ["Work_mode", "workMode"],
+    Job_id: ["Job_id", "jobId"],
+    Job_link: ["Job_link", "jobLink"]
+  };
+
+  let filledCount = 0;
+
+  for (const [fieldName, paramNames] of Object.entries(fieldMap)) {
+    const value = paramNames.map(paramName => params.get(paramName)).find(Boolean);
+
+    if (value) {
+      fillField(fieldName, value);
+      filledCount += 1;
+    }
+  }
+
+  if (!jobIdInput.value && jobLinkInput.value) {
+    jobIdInput.value = detectJobIdFromUrl(jobLinkInput.value) || "";
+  }
+
+  return filledCount;
+}
+
+  window.addEventListener("DOMContentLoaded", () =>
+  {
+    if (!isLocalTracker()) {
+      extractButton.closest(".field").style.display = "none";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const filledCount = fillFormFromBookmarkletParams(params);
+
+    if (filledCount > 1) {
+      setStatusMessage("Bookmarklet details loaded. Please review before saving.", "success");
+    } else if (jobLinkInput.value) {
+      setStatusMessage("Job link loaded. Use the bookmarklet from the job page to fill details without a local server.", "");
+    }
+  });
+
+  extractButton.addEventListener("click", extractDetailsFromJobLink);
 
   </script>
 </body>
