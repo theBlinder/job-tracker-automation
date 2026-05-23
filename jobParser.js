@@ -136,6 +136,79 @@ const JOB_ID_URL_PARAMS = [
   "job_id"
 ];
 
+const ATS_NOISE_TERMS = [
+  "ashby",
+  "ashbyhq",
+  "bamboohr",
+  "boards",
+  "careers",
+  "greenhouse",
+  "icims",
+  "jobvite",
+  "lever",
+  "myworkdayjobs",
+  "oracle",
+  "oraclecloud",
+  "smartrecruiters",
+  "successfactors",
+  "taleo",
+  "workable",
+  "workday"
+];
+
+const FIELD_NOISE_PHRASES = [
+  "about us",
+  "accessibility",
+  "application status",
+  "apply",
+  "apply now",
+  "candidate home",
+  "cookie",
+  "declined",
+  "footer",
+  "job alert",
+  "job alerts",
+  "job description",
+  "job search",
+  "jobs found",
+  "login",
+  "menu",
+  "navigation",
+  "not selected",
+  "privacy",
+  "rejected",
+  "responsibilities",
+  "save job",
+  "search results",
+  "share",
+  "sign in",
+  "terms"
+];
+
+const ROLE_WORDS = [
+  "analyst",
+  "architect",
+  "associate",
+  "automation",
+  "consultant",
+  "developer",
+  "director",
+  "engineer",
+  "intern",
+  "lead",
+  "manager",
+  "member",
+  "qa",
+  "quality",
+  "scientist",
+  "sdet",
+  "software",
+  "staff",
+  "specialist",
+  "technical",
+  "tester"
+];
+
 const KNOWN_SKILLS = [
   "Accessibility",
   "Agile",
@@ -216,35 +289,27 @@ function dedupeValues(values) {
 
 function isNoiseLine(value) {
   const text = cleanExtractedValue(value).toLowerCase();
-  const noiseWords = [
-    "skip to",
-    "privacy",
-    "terms",
-    "cookie",
-    "sign in",
-    "login",
-    "apply",
-    "footer",
-    "navigation",
-    "menu",
-    "accessibility",
-    "save job",
-    "share",
-    "declined",
-    "applied",
-    "application submitted",
-    "application status",
-    "not selected",
-    "rejected",
-    "search results",
-    "jobs found"
-  ];
 
-  return noiseWords.some(word => text.includes(word));
+  return FIELD_NOISE_PHRASES.some(word => text.includes(word));
 }
 
 function hasLetters(value) {
   return /[a-z]/i.test(value);
+}
+
+function hasAtsNoise(value) {
+  const lower = cleanExtractedValue(value).toLowerCase();
+  return ATS_NOISE_TERMS.some(term => new RegExp(`(^|[^a-z0-9])${term}([^a-z0-9]|$)`, "i").test(lower));
+}
+
+function hasRoleWord(value) {
+  const lower = cleanExtractedValue(value).toLowerCase();
+  return ROLE_WORDS.some(word => new RegExp(`(^|[^a-z0-9])${word}([^a-z0-9]|$)`, "i").test(lower));
+}
+
+function looksLikeNavigationText(value) {
+  const text = cleanExtractedValue(value);
+  return /[|•>]/.test(text) || text.split(/\s+/).length > 16;
 }
 
 function isConfidentCompany(value) {
@@ -253,8 +318,11 @@ function isConfidentCompany(value) {
 
   if (text.length < 2 || text.length > 90) return false;
   if (!hasLetters(text) || isNoiseLine(text)) return false;
-  if (/(workday|myworkdayjobs|greenhouse|lever|ashby|workable|smartrecruiters|icims|successfactors|oraclecloud|taleo|jobvite|careers|jobs)$/i.test(lower)) return false;
-  if (lower.includes("job description") || lower.includes("responsibilities")) return false;
+  if (hasAtsNoise(text) || looksLikeNavigationText(text)) return false;
+  if (/^(company|employer|organization|hiring company)$/i.test(text)) return false;
+  if (/\b(job|jobs|careers|career|hiring|recruiting|recruitment|talent|portal|apply|application)\b/i.test(lower)) return false;
+  if (hasRoleWord(text)) return false;
+  if (text.split(/\s+/).length > 6) return false;
 
   return true;
 }
@@ -266,8 +334,10 @@ function isConfidentRole(value) {
   if (text.length < 3 || text.length > 120) return false;
   if (!hasLetters(text) || isNoiseLine(text)) return false;
   if (/^https?:\/\//i.test(text)) return false;
-  if (lower.includes("job description") || lower.includes("responsibilities")) return false;
-  if (text.split(" ").length > 14) return false;
+  if (hasAtsNoise(text) || looksLikeNavigationText(text)) return false;
+  if (/\b(company|employer|organization|careers|job search|all jobs|saved jobs)\b/i.test(lower)) return false;
+  if (text.split(/\s+/).length > 10) return false;
+  if (!hasRoleWord(text) && !/\b(product owner|scrum master|business systems|data science)\b/i.test(lower)) return false;
 
   return true;
 }
@@ -278,8 +348,9 @@ function isConfidentLocation(value) {
 
   if (text.length < 2 || text.length > 120) return false;
   if (!hasLetters(text) || isNoiseLine(text)) return false;
-  if (lower.includes("job description") || lower.includes("responsibilities")) return false;
-  if (text.split(" ").length > 14) return false;
+  if (hasAtsNoise(text) || looksLikeNavigationText(text)) return false;
+  if (/\b(job|role|position|company|description|responsibilities|qualifications|salary)\b/i.test(lower)) return false;
+  if (text.split(/\s+/).length > 8) return false;
 
   return true;
 }
@@ -543,8 +614,14 @@ function detectLocation(bodyText) {
     "Hybrid"
   ];
 
-  const text = String(bodyText || "").toLowerCase();
-  const location = commonLocations.find(item => text.includes(item.toLowerCase()));
+  const lines = String(bodyText || "")
+    .split("\n")
+    .map(cleanExtractedValue)
+    .filter(isConfidentLocation);
+
+  const location = commonLocations.find(item =>
+    lines.some(line => new RegExp(`(^|[^a-z])${item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z]|$)`, "i").test(line))
+  );
 
   return location ? cleanExtractedValue(location) : "";
 }
@@ -611,10 +688,10 @@ function detectCompanyFromUrl(jobUrl) {
       "en-gb"
     ]);
 
-    const candidates = [
-      ...parsedUrl.hostname.toLowerCase().replace(/^www\./, "").split(/[./_-]+/),
-      ...parsedUrl.pathname.toLowerCase().split(/[./_-]+/)
-    ]
+    const candidates = parsedUrl.hostname
+      .toLowerCase()
+      .replace(/^www\./, "")
+      .split(/[./_-]+/)
       .map(cleanUrlText)
       .filter(Boolean)
       .filter(part => !ignoredWords.has(part.toLowerCase()))
@@ -629,25 +706,32 @@ function detectCompanyFromUrl(jobUrl) {
 }
 
 function detectCompanyFromPage(bodyText, fallbackCompany) {
-  const lines = String(bodyText || "")
+  const rawLines = String(bodyText || "")
     .split("\n")
-    .map(cleanExtractedValue)
+    .map(value => String(value || "").replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  const possibleCompany = lines.find(line => isConfidentCompany(line) && !isConfidentRole(line));
-  return possibleCompany || cleanExtractedValue(fallbackCompany);
+  const labeledCompany = rawLines
+    .map(line => line.match(/^(?:company|employer|organization|hiring company)\s*[:\-]\s*(.+)$/i))
+    .map(match => cleanExtractedValue(match && match[1]))
+    .find(isConfidentCompany);
+
+  return labeledCompany || (isConfidentCompany(fallbackCompany) ? cleanExtractedValue(fallbackCompany) : "");
 }
 
 function detectRoleFromPage(pageTitle, bodyText) {
   const fromTitle = getPageTitleCandidate(pageTitle, isConfidentRole).value;
   if (fromTitle) return fromTitle;
 
-  const lines = String(bodyText || "")
+  const rawLines = String(bodyText || "")
     .split("\n")
-    .map(cleanExtractedValue)
+    .map(value => String(value || "").replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  return lines.find(isConfidentRole) || "";
+  return rawLines
+    .map(line => line.match(/^(?:job title|title|role|position|opening)\s*[:\-]\s*(.+)$/i))
+    .map(match => cleanExtractedValue(match && match[1]))
+    .find(isConfidentRole) || "";
 }
 
 function detectExperience(bodyText) {
@@ -706,7 +790,7 @@ async function extractRole(page, jobUrl, pageTitle, bodyText) {
     async () => getPageTitleCandidate(pageTitle, isConfidentRole),
     async () => {
       const value = detectRoleFromPage(pageTitle, bodyText);
-      return value ? { value, source: "fallback: visible page text" } : { value: "", source: "" };
+      return value ? { value, source: "fallback: labeled page text" } : { value: "", source: "" };
     }
   ];
 
@@ -730,7 +814,7 @@ async function extractLocation(page, jobUrl, bodyText) {
     async () => getUrlParam(jobUrl, LOCATION_URL_PARAMS, isConfidentLocation),
     async () => {
       const value = detectLocation(bodyText);
-      return value ? { value, source: "fallback: known location in page text" } : { value: "", source: "" };
+      return value ? { value, source: "fallback: known location in confident text" } : { value: "", source: "" };
     }
   ];
 
@@ -761,7 +845,7 @@ async function extractCompany(page, jobUrl, pageTitle, bodyText) {
     },
     async () => {
       const value = detectCompanyFromPage(bodyText, "");
-      return value ? { value, source: "fallback: visible page text" } : { value: "", source: "" };
+      return value ? { value, source: "fallback: labeled page text" } : { value: "", source: "" };
     },
     async () => {
       const value = detectCompanyFromUrl(jobUrl);

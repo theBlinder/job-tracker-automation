@@ -8,6 +8,10 @@
       box-sizing: border-box;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -106,6 +110,31 @@
       font-weight: 800;
       text-decoration: underline;
       text-underline-offset: 3px;
+    }
+
+    .bookmarklet-actions {
+      max-width: 440px;
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bookmarklet-copy {
+      width: auto;
+      min-height: 38px;
+      margin: 0;
+      padding: 9px 14px;
+      border: 1px solid #bfdbfe;
+      background: #ffffff;
+      color: #1d4ed8;
+      box-shadow: none;
+      font-size: 13px;
+    }
+
+    .bookmarklet-copy:hover {
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16);
     }
 
     .momentum {
@@ -392,9 +421,13 @@
       <h1>Track every opportunity with clarity and <span class="highlight">confidence.</span></h1>
       <p class="description">Keep your applications, referrals, job links, and next steps in one focused place so your search feels organized instead of overwhelming.</p>
       <p class="note">Every saved role is one more step toward the work you are building for.</p>
-      <p class="bookmarklet-note">
-        Drag <a id="bookmarkletLink" href="#">Save Job Bookmarklet</a> to your bookmarks bar, or copy its link on mobile.
-      </p>
+      <div class="bookmarklet-note" id="bookmarkletNote" hidden>
+        <strong>One-time setup:</strong> save <a id="bookmarkletLink" href="#">Extract Job</a> to your bookmarks. Daily use starts from the job posting page.
+        <div class="bookmarklet-actions">
+          <span>Drag the link, or copy the bookmarklet code.</span>
+          <button type="button" class="bookmarklet-copy" id="copyBookmarkletButton">Copy</button>
+        </div>
+      </div>
       <div class="momentum" aria-label="Job search momentum">
         <span>Discover</span>
         <span>Apply</span>
@@ -496,7 +529,7 @@
           </select>
         </div>
 
-        <div class="field full">
+        <div class="field full local-extract-field" hidden>
           <button type="button" id="extractButton">
            Extract from pasted link
           </button>
@@ -523,11 +556,12 @@ const statusMessage = document.getElementById("statusMessage");
 const accessKey = document.getElementById("accessKey");
 const togglePassword = document.getElementById("togglePassword");
 const bookmarkletLink = document.getElementById("bookmarkletLink");
+const bookmarkletNote = document.getElementById("bookmarkletNote");
 
 const jobLinkInput = document.querySelector('input[name="Job_link"]');
 const jobIdInput = document.querySelector('input[name="Job_id"]');
 const TRACKER_URL = "https://theblinder.github.io/job-tracker-automation/";
-const BOOKMARKLET_CODE = `(()=>{const normalize=value=>String(value||"").replace(/\\s+/g," ").trim();const clean=value=>normalize(value).replace(/^(company|employer|organization|job title|title|role|position|location|job location|work location|office|job id|job number|job reference|requisition id|req id|reference number|experience|required experience|skills|required skills|key skills|technologies)\\s*[:-]\\s*/i,"").trim();const bodyText=document.body?document.body.innerText:"";const meta=names=>{for(const name of names){const element=document.querySelector('meta[name="'+name+'"],meta[property="'+name+'"]');const value=clean(element&&element.getAttribute("content"));if(value)return value}return""};const firstText=selectors=>{for(const selector of selectors){const elements=[...document.querySelectorAll(selector)].slice(0,10);for(const element of elements){const value=clean(element.innerText||element.textContent);if(value&&value.length<180)return value}}return""};const nearLabel=labels=>{const elements=[...document.querySelectorAll("body *")].slice(0,1500);const normalizedLabels=labels.map(label=>label.toLowerCase());for(const element of elements){const text=normalize(element.innerText||element.textContent);if(!text||text.length>220)continue;const lower=text.toLowerCase();for(const label of normalizedLabels){if(lower===label){const value=clean(element.nextElementSibling&&(element.nextElementSibling.innerText||element.nextElementSibling.textContent));if(value)return value}if(lower.startsWith(label+":")||lower.startsWith(label+" -")){const value=clean(text.slice(label.length+1));if(value)return value}}}return""};const validCompany=value=>{const text=clean(value);const lower=text.toLowerCase();if(!text||text.length<2||text.length>80)return"";if(/(blank|workday|myworkdayjobs|greenhouse|lever|ashby|workable|smartrecruiters|icims|successfactors|oracle|taleo|careers|career|jobs|job|boards|board|apply|application|candidate|job search|apply now|privacy|terms|login|sign in)/i.test(lower))return"";if(/(engineer|developer|analyst|manager|consultant|intern|specialist|architect|tester|qa|sdet|role|position|location|experience)/i.test(lower))return"";return text};const bestCompany=()=>{const candidates=[];const add=value=>{const text=validCompany(value);if(text)candidates.push(text)};add(nearLabel(["Company","Employer","Organization","Hiring company"]));["job:company","company","employer","hiringOrganization","og:site_name","application-name"].forEach(name=>add(meta([name])));['[data-testid*="company" i]','[data-test*="company" i]','[data-qa*="company" i]','[aria-label*="company" i]','[itemprop="hiringOrganization"]','[itemprop="name"]'].forEach(selector=>add(firstText([selector])));normalize(document.title).split(/\\s(?:\\||-|@|at)\\s|,/).forEach(part=>add(part));try{const url=new URL(location.href);url.hostname.replace(/^www\\./,"").split(/[._-]|\\./).forEach(part=>add(part));url.pathname.split("/").filter(Boolean).slice(0,3).forEach(part=>add(decodeURIComponent(part).replace(/[-_]/g," ")))}catch(error){}return candidates.find(Boolean)||""};const jobIdFromUrl=()=>{try{const url=new URL(location.href);const params=["jobReferenceCode","id","jobId","jobID","reqId","requisitionId","wdjobreqid","referenceCode","jobReqId","job_id","requisition_id"];for(const param of params){const value=clean(url.searchParams.get(param));if(value)return value}const parts=url.pathname.split("/").filter(Boolean).reverse();for(const rawPart of parts){const part=decodeURIComponent(rawPart);const match=part.match(/_([A-Za-z0-9-]{4,})$/)||part.match(/\\b([A-Z]{1,5}[-_]\\d{3,})\\b/i)||part.match(/\\b(\\d{5,})\\b/)||part.match(/^((?=.*\\d)[A-Za-z0-9-]{6,})$/);if(match)return clean(match[1]||match[0])}}catch(error){}return""};const experience=()=>{const fromLabel=nearLabel(["Experience","Experience required","Required experience"]);if(fromLabel)return fromLabel;const match=bodyText.match(/(\\d+\\s*-\\s*\\d+\\s*years|\\d+\\+?\\s*years|fresher|entry level)/i);return match?clean(match[0]):""};const workMode=()=>/\\bremote\\b/i.test(bodyText)?"Remote":/\\bhybrid\\b/i.test(bodyText)?"Hybrid":/\\bonsite\\b|\\bon-site\\b|\\bon site\\b/i.test(bodyText)?"On site":"";const skills=()=>{const fromLabel=nearLabel(["Skills","Required skills","Key skills","Technologies"]);if(fromLabel)return fromLabel;const fromMeta=meta(["job:skills","skills","keywords"]);if(fromMeta)return fromMeta;return["JavaScript","TypeScript","Java","Python","SQL","Selenium","Playwright","Cypress","Postman","API Testing","Manual Testing","Automation Testing","Regression Testing","Functional Testing","Jira","Agile","Scrum","React","Node.js","AWS","Azure"].filter(skill=>bodyText.toLowerCase().includes(skill.toLowerCase())).join(", ")};const params=new URLSearchParams({Job_link:location.href,Company:bestCompany(),Role:firstText(["h1",'[data-testid*="job-title" i]','[data-testid*="title" i]','[data-test*="job-title" i]','[aria-label*="job title" i]','[class*="job-title" i]','[class*="position-title" i]'])||nearLabel(["Job title","Title","Role","Position","Opening"])||meta(["job:title","og:title","twitter:title"])||document.title,Location:firstText(['[data-testid*="job-location" i]','[data-testid*="location" i]','[data-test*="location" i]','[aria-label*="location" i]','[class*="job-location" i]','[class*="location" i]'])||nearLabel(["Location","Job location","Work location","Office"])||meta(["job:location","location"]),Exp_required:experience(),Job_id:nearLabel(["Job ID","Job Id","Job number","Job reference","Requisition ID","Req ID","Reference number"])||meta(["job:id","job:identifier","job:requisition","requisitionId","reqId"])||jobIdFromUrl(),Skills:skills(),Work_mode:workMode()});window.open("${TRACKER_URL}?"+params.toString(),"_blank")})()`;
+const BOOKMARKLET_CODE = `(()=>{const normalize=value=>String(value||"").replace(/\\s+/g," ").trim();const clean=value=>normalize(value).replace(/^(company|employer|organization|job title|title|role|position|opening|location|locations|job location|work location|office|job id|job number|job reference|requisition id|req id|reference number|experience|required experience|skills|required skills|key skills|technologies)\\s*[:-]\\s*/i,"").trim();const bodyText=document.body?document.body.innerText:"";const ats=/\\b(workday|myworkdayjobs|greenhouse|lever|ashby|ashbyhq|workable|smartrecruiters|icims|successfactors|oracle|oraclecloud|taleo|jobvite|bamboohr|careers|jobs|boards)\\b/i;const noise=/\\b(apply|apply now|application status|candidate home|cookie|job alert|job search|jobs found|login|menu|navigation|privacy|save job|search results|share|sign in|terms)\\b/i;const roleWords=/\\b(analyst|architect|associate|automation|consultant|developer|director|engineer|intern|lead|manager|member|qa|quality|scientist|sdet|software|staff|specialist|technical|tester|product owner|scrum master)\\b/i;const noisy=value=>{const text=clean(value);return !text||noise.test(text)||ats.test(text)||/[|•>]/.test(text)};const validCompany=value=>{const text=clean(value);if(text.length<2||text.length>90||noisy(text)||roleWords.test(text))return"";if(/^(company|employer|organization|hiring company)$/i.test(text))return"";if(/\\b(job|jobs|career|careers|hiring|recruiting|recruitment|talent|portal|apply|application)\\b/i.test(text))return"";if(text.split(/\\s+/).length>6)return"";return text};const validRole=value=>{const text=clean(value);if(text.length<3||text.length>120||noisy(text)||!roleWords.test(text))return"";if(/\\b(company|employer|organization|all jobs|saved jobs)\\b/i.test(text))return"";if(text.split(/\\s+/).length>10)return"";return text};const validLocation=value=>{const text=clean(value);if(text.length<2||text.length>120||noisy(text))return"";if(/\\b(job|role|position|company|description|responsibilities|qualifications|salary)\\b/i.test(text))return"";if(text.split(/\\s+/).length>8)return"";return text};const meta=(names,validator)=>{for(const name of names){const element=document.querySelector('meta[name="'+name+'"],meta[property="'+name+'"]');const value=validator(element&&element.getAttribute("content"));if(value)return value}return""};const firstText=(selectors,validator)=>{for(const selector of selectors){const elements=[...document.querySelectorAll(selector)].slice(0,10);for(const element of elements){const value=validator(element.innerText||element.textContent);if(value)return value}}return""};const nearLabel=(labels,validator)=>{const elements=[...document.querySelectorAll("body *")].slice(0,1500);const normalizedLabels=labels.map(label=>label.toLowerCase());for(const element of elements){const text=normalize(element.innerText||element.textContent);if(!text||text.length>220)continue;const lower=text.toLowerCase();for(const label of normalizedLabels){if(lower===label){const value=validator(element.nextElementSibling&&(element.nextElementSibling.innerText||element.nextElementSibling.textContent));if(value)return value}if(lower.startsWith(label+":")||lower.startsWith(label+" -")){const value=validator(text.slice(label.length+1));if(value)return value}}}return""};const titlePart=validator=>normalize(document.title).split(/\\s(?:\\||-|@|at)\\s|,/).map(clean).find(validator)||"";const bestCompany=()=>{const candidates=[];const add=value=>{const text=validCompany(value);if(text)candidates.push(text)};add(nearLabel(["Company","Employer","Organization","Hiring company"],validCompany));["job:company","company","employer","hiringOrganization"].forEach(name=>add(meta([name],validCompany)));['[data-testid*="company" i]','[data-test*="company" i]','[data-qa*="company" i]','[aria-label*="company" i]','[itemprop="hiringOrganization"]'].forEach(selector=>add(firstText([selector],validCompany)));add(titlePart(validCompany));try{const url=new URL(location.href);url.hostname.replace(/^www\\./,"").split(/[._-]|\\./).forEach(part=>add(decodeURIComponent(part).replace(/[-_]/g," ")))}catch(error){}return candidates.find(Boolean)||""};const jobIdFromUrl=()=>{try{const url=new URL(location.href);const params=["jobReferenceCode","id","jobId","jobID","reqId","requisitionId","wdjobreqid","referenceCode","jobReqId","job_id","requisition_id"];for(const param of params){const value=clean(url.searchParams.get(param));if(value)return value}const parts=url.pathname.split("/").filter(Boolean).reverse();for(const rawPart of parts){const part=decodeURIComponent(rawPart);const match=part.match(/_([A-Za-z0-9-]{4,})$/)||part.match(/\\b([A-Z]{1,5}[-_]\\d{3,})\\b/i)||part.match(/\\b(\\d{5,})\\b/)||part.match(/^((?=.*\\d)[A-Za-z0-9-]{6,})$/);if(match)return clean(match[1]||match[0])}}catch(error){}return""};const experience=()=>{const fromLabel=nearLabel(["Experience","Experience required","Required experience"],value=>clean(value));if(fromLabel)return fromLabel;const match=bodyText.match(/(\\d+\\s*-\\s*\\d+\\s*years|\\d+\\+?\\s*years|fresher|entry level)/i);return match?clean(match[0]):""};const workMode=()=>/\\bremote\\b/i.test(bodyText)?"Remote":/\\bhybrid\\b/i.test(bodyText)?"Hybrid":/\\bonsite\\b|\\bon-site\\b|\\bon site\\b/i.test(bodyText)?"On site":"";const skills=()=>{const fromLabel=nearLabel(["Skills","Required skills","Key skills","Technologies"],value=>clean(value));if(fromLabel)return fromLabel;const fromMeta=meta(["job:skills","skills","keywords"],value=>clean(value));if(fromMeta)return fromMeta;return["JavaScript","TypeScript","Java","Python","SQL","Selenium","Playwright","Cypress","Postman","API Testing","Manual Testing","Automation Testing","Regression Testing","Functional Testing","Jira","Agile","Scrum","React","Node.js","AWS","Azure"].filter(skill=>bodyText.toLowerCase().includes(skill.toLowerCase())).join(", ")};const params=new URLSearchParams({Job_link:location.href,Company:bestCompany(),Role:firstText(["h1",'[data-testid*="job-title" i]','[data-testid*="title" i]','[data-test*="job-title" i]','[aria-label*="job title" i]','[class*="job-title" i]','[class*="position-title" i]'],validRole)||nearLabel(["Job title","Title","Role","Position","Opening"],validRole)||meta(["job:title","og:title","twitter:title"],validRole)||titlePart(validRole),Location:firstText(['[data-testid*="job-location" i]','[data-testid*="location" i]','[data-test*="location" i]','[aria-label*="location" i]','[class*="job-location" i]','[class*="location" i]'],validLocation)||nearLabel(["Location","Job location","Work location","Office"],validLocation)||meta(["job:location","location"],validLocation),Exp_required:experience(),Job_id:nearLabel(["Job ID","Job Id","Job number","Job reference","Requisition ID","Req ID","Reference number"],value=>clean(value))||meta(["job:id","job:identifier","job:requisition","requisitionId","reqId"],value=>clean(value))||jobIdFromUrl(),Skills:skills(),Work_mode:workMode()});window.open("${TRACKER_URL}?"+params.toString(),"_blank")})()`;
 
 function isLocalTracker() {
   return ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -684,21 +718,21 @@ function fillField(name, value) {
 }
 
 function fillFormFromBookmarkletParams(params) {
-  const fieldMap = {
-    Company: ["Company", "company"],
-    Role: ["Role", "role"],
-    Exp_required: ["Exp_required", "experience"],
-    Location: ["Location", "location"],
-    Skills: ["Skills", "skills"],
-    Work_mode: ["Work_mode", "workMode"],
-    Job_id: ["Job_id", "jobId"],
-    Job_link: ["Job_link", "jobLink"]
-  };
+  const fieldNames = [
+    "Company",
+    "Role",
+    "Exp_required",
+    "Location",
+    "Skills",
+    "Work_mode",
+    "Job_id",
+    "Job_link"
+  ];
 
   let filledCount = 0;
 
-  for (const [fieldName, paramNames] of Object.entries(fieldMap)) {
-    const value = paramNames.map(paramName => params.get(paramName)).find(Boolean);
+  for (const fieldName of fieldNames) {
+    const value = params.get(fieldName);
 
     if (value) {
       fillField(fieldName, value);
@@ -724,6 +758,10 @@ function fillFormFromBookmarkletParams(params) {
     const params = new URLSearchParams(window.location.search);
     const filledCount = fillFormFromBookmarkletParams(params);
 
+    if (filledCount > 0) {
+      bookmarkletNote.style.display = "none";
+    }
+
     if (filledCount > 1) {
       setStatusMessage("Bookmarklet details loaded. Please review before saving.", "success");
     } else if (jobLinkInput.value) {
@@ -733,6 +771,74 @@ function fillFormFromBookmarkletParams(params) {
 
   extractButton.addEventListener("click", extractDetailsFromJobLink);
 
+  </script>
+  <script>
+    const HOSTED_BOOKMARKLET_CODE = [
+      "(()=>{",
+      "const TRACKER_URL='https://theblinder.github.io/job-tracker-automation/';",
+      "const normalize=value=>String(value||'').replace(/\\s+/g,' ').trim();",
+      "const clean=value=>normalize(value).replace(/^(company|employer|organization|job title|title|role|position|opening|location|locations|job location|work location|office|job id|job number|job reference|requisition id|req id|reference number|experience|required experience|skills|required skills|key skills|technologies|qualifications)\\s*[:-]\\s*/i,'').trim();",
+      "const bodyText=document.body?document.body.innerText:'';",
+      "const lowerBody=bodyText.toLowerCase();",
+      "const ats=/\\b(workday|myworkdayjobs|greenhouse|lever|ashby|ashbyhq|workable|smartrecruiters|icims|successfactors|oracle|oraclecloud|taleo|jobvite|bamboohr|careers|jobs|boards)\\b/i;",
+      "const noise=/\\b(apply|apply now|application status|candidate home|cookie|job alert|job search|jobs found|login|menu|navigation|privacy|save job|search results|share|sign in|terms|view all jobs)\\b/i;",
+      "const roleWords=/\\b(analyst|architect|associate|automation|consultant|developer|director|engineer|intern|lead|manager|member|qa|quality|scientist|sdet|software|staff|specialist|technical|tester|product owner|scrum master)\\b/i;",
+      "const noisy=value=>{const text=clean(value);return !text||noise.test(text)||ats.test(text)||/[|>]/.test(text)||text.split(/\\s+/).length>16};",
+      "const validCompany=value=>{const text=clean(value);if(text.length<2||text.length>90||noisy(text))return'';if(/^(company|employer|organization|hiring company)$/i.test(text))return'';if(/\\b(job|jobs|career|careers|hiring|recruiting|recruitment|talent|portal|apply|application|engineer|developer|analyst|consultant|intern|manager|qa|sdet|tester)\\b/i.test(text))return'';if(text.split(/\\s+/).length>6)return'';return text};",
+      "const validRole=value=>{const text=clean(value);if(text.length<3||text.length>120||noisy(text)||!roleWords.test(text))return'';if(/\\b(company|employer|organization|all jobs|saved jobs)\\b/i.test(text))return'';if(text.split(/\\s+/).length>10)return'';return text};",
+      "const validLocation=value=>{const text=clean(value);if(text.length<2||text.length>120||noisy(text))return'';if(/\\b(job|role|position|company|description|responsibilities|qualifications|salary|benefits)\\b/i.test(text))return'';if(text.split(/\\s+/).length>8)return'';return text};",
+      "const validLoose=value=>clean(value).slice(0,180);",
+      "const meta=(names,validator)=>{for(const name of names){const element=document.querySelector('meta[name=\"'+name+'\"],meta[property=\"'+name+'\"]');const value=validator(element&&element.getAttribute('content'));if(value)return value}return''};",
+      "const firstText=(selectors,validator)=>{for(const selector of selectors){const elements=[...document.querySelectorAll(selector)].slice(0,12);for(const element of elements){const style=getComputedStyle(element);const rect=element.getBoundingClientRect();if(style.display==='none'||style.visibility==='hidden'||rect.width===0||rect.height===0)continue;const value=validator(element.innerText||element.textContent);if(value)return value}}return''};",
+      "const nearLabel=(labels,validator)=>{const elements=[...document.querySelectorAll('body *')].slice(0,1800);const normalizedLabels=labels.map(label=>label.toLowerCase());for(const element of elements){const text=normalize(element.innerText||element.textContent);if(!text||text.length>240)continue;const lower=text.toLowerCase();for(const label of normalizedLabels){if(lower===label){const value=validator(element.nextElementSibling&&(element.nextElementSibling.innerText||element.nextElementSibling.textContent));if(value)return value}if(lower.startsWith(label+':')||lower.startsWith(label+' -')){const value=validator(text.slice(label.length+1));if(value)return value}}}return''};",
+      "const titlePart=validator=>normalize(document.title).split(/\\s(?:\\||-|@|at)\\s|,/).map(clean).find(validator)||'';",
+      "const jobIdFromUrl=()=>{try{const url=new URL(location.href);const params=['jobReferenceCode','id','jobId','jobID','reqId','requisitionId','wdjobreqid','referenceCode','jobReqId','job_id','requisition_id','req_id','jobid','job-id'];for(const param of params){const value=clean(url.searchParams.get(param));if(value&&/[a-z0-9]/i.test(value))return value}const parts=url.pathname.split('/').filter(Boolean).reverse();for(const rawPart of parts){const part=decodeURIComponent(rawPart);const match=part.match(/_([A-Za-z0-9-]{4,})$/)||part.match(/\\b([A-Z]{1,5}[-_]\\d{3,})\\b/i)||part.match(/\\b(\\d{5,})\\b/)||part.match(/^((?=.*\\d)[A-Za-z0-9-]{6,})$/);if(match)return clean(match[1]||match[0])}}catch(error){}return''};",
+      "const company=()=>nearLabel(['Company','Employer','Organization','Hiring company'],validCompany)||meta(['job:company','company','employer','hiringOrganization','og:site_name','application-name'],validCompany)||firstText(['[data-testid*=\"company\" i]','[data-test*=\"company\" i]','[data-qa*=\"company\" i]','[aria-label*=\"company\" i]','[itemprop=\"hiringOrganization\"]','[class*=\"company\" i]'],validCompany)||titlePart(validCompany);",
+      "const role=()=>firstText(['h1','[data-testid*=\"job-title\" i]','[data-testid*=\"title\" i]','[data-test*=\"job-title\" i]','[data-qa*=\"job-title\" i]','[aria-label*=\"job title\" i]','[class*=\"job-title\" i]','[class*=\"posting-title\" i]','[class*=\"position-title\" i]'],validRole)||nearLabel(['Job title','Title','Role','Position','Opening'],validRole)||meta(['job:title','title','og:title','twitter:title'],validRole)||titlePart(validRole);",
+      "const loc=()=>firstText(['[data-testid*=\"job-location\" i]','[data-testid*=\"location\" i]','[data-test*=\"location\" i]','[data-qa*=\"location\" i]','[aria-label*=\"location\" i]','[class*=\"job-location\" i]','[class*=\"location\" i]'],validLocation)||nearLabel(['Location','Locations','Job location','Work location','Office'],validLocation)||meta(['job:location','location','job:jobLocation'],validLocation);",
+      "const experience=()=>nearLabel(['Experience','Experience required','Required experience'],validLoose)||((bodyText.match(/(\\d+\\s*-\\s*\\d+\\s*years|\\d+\\+?\\s*years|fresher|entry level)/i)||[])[0]||'');",
+      "const workMode=()=>/\\bremote\\b/i.test(bodyText)?'Remote':/\\bhybrid\\b/i.test(bodyText)?'Hybrid':/\\bonsite\\b|\\bon-site\\b|\\bon site\\b/i.test(bodyText)?'On site':'';",
+      "const skills=()=>{const labeled=nearLabel(['Skills','Required skills','Key skills','Technologies','Qualifications'],validLoose);if(labeled)return labeled;const metaSkills=meta(['job:skills','skills','keywords','news_keywords'],validLoose);if(metaSkills)return metaSkills;return['JavaScript','TypeScript','Java','Python','SQL','Selenium','Playwright','Cypress','Postman','API Testing','Manual Testing','Automation Testing','Regression Testing','Functional Testing','Jira','Agile','Scrum','React','Node.js','AWS','Azure'].filter(skill=>lowerBody.includes(skill.toLowerCase())).join(', ')};",
+      "const params=new URLSearchParams({Company:company(),Role:role(),Exp_required:clean(experience()),Location:loc(),Skills:clean(skills()),Work_mode:workMode(),Job_id:nearLabel(['Job ID','Job Id','Job number','Job reference','Requisition ID','Req ID','Reference number'],validLoose)||meta(['job:id','job:identifier','job:requisition','requisitionId','reqId'],validLoose)||jobIdFromUrl(),Job_link:location.href});",
+      "window.open(TRACKER_URL+'?'+params.toString(),'_blank');",
+      "})()"
+    ].join("");
+    const HOSTED_BOOKMARKLET_HREF = `javascript:${HOSTED_BOOKMARKLET_CODE}`;
+
+    function copyHostedBookmarklet() {
+      const fallbackCopy = () => {
+        const textArea = document.createElement("textarea");
+        textArea.value = HOSTED_BOOKMARKLET_HREF;
+        textArea.setAttribute("readonly", "");
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      };
+
+      const copied = navigator.clipboard
+        ? navigator.clipboard.writeText(HOSTED_BOOKMARKLET_HREF)
+        : Promise.resolve().then(fallbackCopy);
+
+      copied
+        .then(() => setStatusMessage("Bookmarklet code copied. Create a bookmark and paste it as the URL.", "success"))
+        .catch(() => {
+          fallbackCopy();
+          setStatusMessage("Bookmarklet code copied. Create a bookmark and paste it as the URL.", "success");
+        });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const hostedBookmarkletLink = document.getElementById("bookmarkletLink");
+      const hostedCopyButton = document.getElementById("copyBookmarkletButton");
+
+      hostedBookmarkletLink.href = HOSTED_BOOKMARKLET_HREF;
+      hostedBookmarkletLink.setAttribute("data-bookmarklet-version", "hosted-query-prefill-v2");
+      hostedBookmarkletLink.setAttribute("title", "Save this once, then run it from a job posting page.");
+      hostedCopyButton.addEventListener("click", copyHostedBookmarklet);
+    });
   </script>
 </body>
 </html>

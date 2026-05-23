@@ -1,11 +1,11 @@
-🚧 Project currently under active development.
+Project currently under active development.
 
 # Job Tracker Automation
 
 Job Tracker Automation is a lightweight job-application tracker with three stable workflows:
 
 1. A hosted GitHub Pages web form for quick desktop or mobile entry.
-2. A no-backend bookmarklet flow that extracts details from the current job page and opens the hosted form.
+2. A one-time saved bookmarklet that extracts details from the current job page and opens the tracker in a new tab.
 3. Optional local Playwright tools for pasted-link extraction and terminal workflows.
 
 Hosted form: https://theblinder.github.io/job-tracker-automation/
@@ -13,23 +13,25 @@ Hosted form: https://theblinder.github.io/job-tracker-automation/
 ## What It Does
 
 - Records job applications with company, role, experience, location, skills, work mode, job ID, job link, application status, and referral status.
-- Submits the hosted form to Google Apps Script, which writes to Google Sheets.
+- Submits the hosted form to Google Apps Script, which writes accepted records to Google Sheets.
 - Keeps access-key validation in Google Apps Script instead of trusting browser-side checks.
 - Auto-fills the Job ID field from common job-link URL patterns.
-- Prevents duplicate records in Google Sheets through the Apps Script backend.
-- Extracts job details from clear job pages through the bookmarklet without requiring localhost.
+- Extracts visible job details through the saved bookmarklet without requiring localhost.
+- Opens the tracker in a new tab from the bookmarklet so the original job page stays open.
 - Supports local Excel saving through the Playwright terminal flow.
+- Supports optional local Google Sheets append through the Google Sheets API.
 
 ## Project Structure
 
 ```text
 job-tracker-automation/
-|-- index.html              # Hosted responsive web form
+|-- index.html              # Hosted responsive web form and bookmarklet
 |-- server.js               # Optional local Express + Playwright extraction API
 |-- playwrightTest.js       # Local Playwright terminal workflow
-|-- jobParser.js            # Job URL parsing helpers
+|-- jobParser.js            # Job extraction and parsing helpers
 |-- excelService.js         # Local Excel saving and duplicate checks
-|-- googleSheetService.js   # Optional Google Sheets sync for terminal flow
+|-- googleSheetService.js   # Optional Google Sheets API append flow
+|-- testGoogleSheet.js      # Local Google Sheets append smoke test
 |-- jobTracker.js           # Basic manual terminal entry flow
 |-- package.json            # Node.js dependencies
 `-- README.md
@@ -41,25 +43,34 @@ The web form is designed for fast manual entry from desktop or mobile.
 
 Use it here:
 
+```text
 https://theblinder.github.io/job-tracker-automation/
+```
 
-The form posts job data to a deployed Google Apps Script web app. The Apps Script endpoint is responsible for validating the access key, checking for duplicates, and writing accepted records to Google Sheets.
+The hosted form posts job data to the deployed Google Apps Script web app configured in `index.html`. The Apps Script endpoint validates the access key, checks duplicates, and writes accepted records to Google Sheets.
 
 When a job link is entered, the form tries to detect a Job ID from the URL path or known query parameters. If a match is found, the Job ID field is filled automatically.
-
-The hosted form can receive extracted values from the bookmarklet through URL parameters. This works without localhost when the job page allows the bookmarklet to read visible page content before opening the tracker.
 
 The pasted-link extraction button is hidden on the hosted tracker. It appears only when running the tracker locally because that workflow needs the optional local server.
 
 ## Bookmarklet Flow
 
-Open the hosted tracker and use the `Save Job Bookmarklet` link shown on the page. Drag it to your bookmarks bar on desktop, or copy its link into a bookmark on mobile.
+Open the hosted tracker once and save the `Extract Job` bookmarklet to your browser bookmarks.
 
-The tracker will receive the extracted values and let you review the fields before saving. Some mobile browsers and job sites may restrict bookmarklet execution; improving mobile reliability remains part of the project scope.
+After it is saved, use it like this:
+
+1. Open a job posting page.
+2. Click the saved `Extract Job` bookmark.
+3. The tracker opens in a new tab with extracted values in the form.
+4. Review the fields before saving.
+
+The bookmarklet extracts only from details that are visible or available in the job page markup. If a field is uncertain, the safer behavior is to leave it blank instead of filling a wrong value.
+
+Some mobile browsers and job sites restrict bookmarklet execution, so desktop bookmarks are the most reliable path.
 
 ## Mobile Usage
 
-The hosted form is responsive and works as a single-column layout on smaller screens. This makes it usable directly from a phone while browsing job postings.
+The hosted form is responsive and works as a single-column layout on smaller screens.
 
 Typical mobile flow:
 
@@ -70,28 +81,37 @@ Typical mobile flow:
 5. Enter the access key.
 6. Submit the job.
 
-## Google Apps Script + Google Sheets
+## Google Sheets
 
-Google Sheets integration is handled by Google Apps Script.
+There are two Google Sheets paths in the project:
 
-The browser form sends a JSON payload to the Apps Script web app URL configured in `index.html`.
+- Hosted form path: `index.html` submits to Google Apps Script.
+- Local terminal path: `googleSheetService.js` appends through the Google Sheets API using service-account values from `.env`.
 
-The Apps Script backend should handle:
-
-- Access-key validation
-- Duplicate prevention
-- Writing valid job records to Google Sheets
-- Returning a JSON response to the form
-
-The local Playwright flow can also submit to Google Sheets when `GOOGLE_SCRIPT_URL` is configured.
-
-Create a `.env` file:
+For the local Google Sheets API flow, create a `.env` file:
 
 ```env
-GOOGLE_SCRIPT_URL=your-google-apps-script-web-app-url
+GOOGLE_SHEET_ID=your-google-sheet-id
+GOOGLE_CLIENT_EMAIL=your-service-account-email
+GOOGLE_PRIVATE_KEY="your-service-account-private-key"
+GOOGLE_SHEET_NAME=Google Sync
 ```
 
-If `GOOGLE_SCRIPT_URL` is not set, the Playwright flow still saves to the local Excel file and skips Google Sheets sync.
+`GOOGLE_SHEET_NAME` is optional. If it is not set, the local sync uses `Google Sync`.
+
+The service account must have access to the target Google Sheet.
+
+The Google Sheets append order matches the Excel-style field structure:
+
+```text
+Company, Role, Exp_required, Location, Skills, Work_mode, Job_id, Job_link, Applied, Referral_asked, Status, Notes, Created_at
+```
+
+To run the local Google Sheets smoke test:
+
+```bash
+node testGoogleSheet.js
+```
 
 ## Local Playwright Terminal Flow
 
@@ -129,10 +149,10 @@ Flow:
 
 1. Paste a job URL in the terminal.
 2. Playwright opens the page in Chromium.
-3. The script attempts to detect page type, company, role, and Job ID.
+3. The script attempts to detect page type, company, role, location, and Job ID.
 4. The terminal asks you to accept or correct detected values.
 5. The record is saved to `job_applications.xlsx`.
-6. If configured, the record is also sent to Google Apps Script.
+6. If configured, the record can also be appended to Google Sheets.
 
 The local Excel flow prevents duplicate entries by comparing existing job links before saving.
 
@@ -155,6 +175,7 @@ This provides a simpler manual-entry terminal flow.
 - XLSX
 - Axios
 - dotenv
+- googleapis
 - readline-sync
 - Google Apps Script
 - Google Sheets
@@ -162,15 +183,13 @@ This provides a simpler manual-entry terminal flow.
 ## Known Limitations
 
 - Job detail detection depends on each job portal's URL format and page structure.
-- Bookmarklet extraction depends on the details already being visible in the current job page.
-- Mobile bookmarklet support is a project goal, but browser/site restrictions may require follow-up work or a browser extension approach.
+- Bookmarklet extraction depends on details already being visible or present in the current job page.
+- Some sites block or limit bookmarklet access.
 - Pasted-link extraction requires the optional local Playwright server to be running.
 - The Playwright flow still needs manual review and correction.
 - The hosted form depends on the deployed Apps Script endpoint being available.
 - Browser-side Job ID detection is best-effort and may not work for every posting.
-- Access-key validation and Google Sheets duplicate prevention are enforced in Apps Script, so the backend must stay in sync with the form fields.
 - Automated tests are not currently included.
-- The repository includes local Excel storage, but Google Sheets is the primary hosted-form storage path.
 
 ## License
 
