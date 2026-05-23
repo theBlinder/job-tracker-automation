@@ -1,33 +1,78 @@
 const readline = require("readline-sync");
-const XLSX = require("xlsx");
-const fs = require("fs");
-const fileName = "job_applications.xlsx";
-
-const Company = readline.question("Enter company name: ");
-const Role = readline.question("Enter job role: ");
-const Exp_required= readline.question("Enter experience required:");
-const Location = readline.question("Enter location: ");
-const Skills = readline.question("Enter required skills: ");
-const Work_mode = readline.question("Enter work mode: "); 
-const job_id = readline.question("Enter job ID: ");
-const applied = readline.question("Have you applied? Yes/No: ");
-const referral_asked = readline.question("Asked for referral? Yes/No: ");
+const { chromium } = require("playwright");
 const { saveJob } = require("./excelService");
 
-const job = {
-  Company: Company,
-  Role: Role,
-  Exp_required: Exp_required,
-  Location: Location,
-  Skills: Skills,
-  Work_mode: Work_mode,
-  Job_id: job_id,
-  Applied: applied,
-  Referral_asked: referral_asked
-  
-};
+const {
+  detectCompanyFromUrl,
+  detectCompanyFromPage,
+  extractRole,
+  extractLocation,
+  detectWorkMode,
+  detectJobIdFromUrl,
+  detectPageType,
+  detectExperience,
+  detectPostedDate
+} = require("./jobParser");
 
-saveJob(job);
+async function run() {
+  const jobLink = readline.question("Enter job link: ");
 
+  const browser = await chromium.launch({ headless: false });
+  const page = await browser.newPage();
 
+  try {
+    await page.goto(jobLink, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000
+    });
 
+    await page.waitForTimeout(3000);
+
+    const pageTitle = await page.title();
+    const bodyText = await page.locator("body").innerText();
+
+    const pageType = detectPageType(jobLink, bodyText);
+
+    if (pageType === "listing") {
+      console.log("This looks like a job listing/search page, not a job detail page.");
+      console.log("Please open a specific job detail page and try again.");
+      await browser.close();
+      return;
+    }
+
+    const companyFromUrl = detectCompanyFromUrl(jobLink);
+    const role = await extractRole(page, jobLink, pageTitle, bodyText);
+    const location = await extractLocation(page, jobLink, bodyText);
+
+    const extractedJob = {
+      Company: detectCompanyFromPage(bodyText, companyFromUrl),
+      Role: role,
+      Exp_required: detectExperience(bodyText),
+      Location: location,
+      Skills: "",
+      Work_mode: detectWorkMode(bodyText),
+      Job_id: detectJobIdFromUrl(jobLink),
+      Posted_date: detectPostedDate(bodyText),
+      Job_link: jobLink
+    };
+
+    console.log("\nExtracted Job Details:");
+    console.log(extractedJob);
+
+    const confirmSave = readline.question("\nSave this job? Yes/No: ");
+
+    if (confirmSave.toLowerCase() === "yes") {
+      saveJob(extractedJob);
+      console.log("Job saved successfully.");
+    } else {
+      console.log("Job not saved.");
+    }
+
+  } catch (error) {
+    console.error("Extraction failed:", error.message);
+  } finally {
+    await browser.close();
+  }
+}
+
+run();
