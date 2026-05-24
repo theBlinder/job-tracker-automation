@@ -420,7 +420,7 @@
       <p class="eyebrow">Career momentum</p>
       <h1>Track every opportunity with clarity and <span class="highlight">confidence.</span></h1>
       <p class="description">Keep your applications, referrals, job links, and next steps in one focused place so your search feels organized instead of overwhelming.</p>
-      <p class="note">Every saved role is one more step toward the work you are building for.</p>
+      <p class="note">Every saved opportunity brings you one step closer to the goal you are working toward.</p>
       <div class="bookmarklet-note" id="bookmarkletNote" hidden>
         <strong>One-time setup:</strong> save <a id="bookmarkletLink" href="#">Extract Job</a> to your bookmarks. Daily use starts from the job posting page.
         <div class="bookmarklet-actions">
@@ -439,6 +439,7 @@
       <div class="form-header">
         <h2>Job Application Tracker</h2>
         <p>Add the details once. Stay ready for follow-ups, referrals, and interviews.</p>
+        <p id="statusMessage" aria-live="polite"></p>
       </div>
 
       <form>
@@ -541,7 +542,6 @@
           </button>
         </div>
 
-        <p class="field full" id="statusMessage" aria-live="polite"></p>
       </form>
     </section>
   </main>
@@ -561,6 +561,9 @@ const bookmarkletNote = document.getElementById("bookmarkletNote");
 const jobLinkInput = document.querySelector('input[name="Job_link"]');
 const jobIdInput = document.querySelector('input[name="Job_id"]');
 const TRACKER_URL = "https://theblinder.github.io/job-tracker-automation/";
+const ACCESS_KEY_STORAGE_KEY = "jobTrackerAccessKey";
+const ACCESS_KEY_SAVED_AT_KEY = "jobTrackerAccessKeySavedAt";
+const ACCESS_KEY_EXPIRY_MS = 30 * 60 * 1000;
 const BOOKMARKLET_CODE = `(()=>{const normalize=value=>String(value||"").replace(/\\s+/g," ").trim();const clean=value=>normalize(value).replace(/^(company|employer|organization|job title|title|role|position|opening|location|locations|job location|work location|office|job id|job number|job reference|requisition id|req id|reference number|experience|required experience|skills|required skills|key skills|technologies)\\s*[:-]\\s*/i,"").trim();const bodyText=document.body?document.body.innerText:"";const ats=/\\b(workday|myworkdayjobs|greenhouse|lever|ashby|ashbyhq|workable|smartrecruiters|icims|successfactors|oracle|oraclecloud|taleo|jobvite|bamboohr|careers|jobs|boards)\\b/i;const noise=/\\b(apply|apply now|application status|candidate home|cookie|job alert|job search|jobs found|login|menu|navigation|privacy|save job|search results|share|sign in|terms)\\b/i;const roleWords=/\\b(analyst|architect|associate|automation|consultant|developer|director|engineer|intern|lead|manager|member|qa|quality|scientist|sdet|software|staff|specialist|technical|tester|product owner|scrum master)\\b/i;const noisy=value=>{const text=clean(value);return !text||noise.test(text)||ats.test(text)||/[|•>]/.test(text)};const validCompany=value=>{const text=clean(value);if(text.length<2||text.length>90||noisy(text)||roleWords.test(text))return"";if(/^(company|employer|organization|hiring company)$/i.test(text))return"";if(/\\b(job|jobs|career|careers|hiring|recruiting|recruitment|talent|portal|apply|application)\\b/i.test(text))return"";if(text.split(/\\s+/).length>6)return"";return text};const validRole=value=>{const text=clean(value);if(text.length<3||text.length>120||noisy(text)||!roleWords.test(text))return"";if(/\\b(company|employer|organization|all jobs|saved jobs)\\b/i.test(text))return"";if(text.split(/\\s+/).length>10)return"";return text};const validLocation=value=>{const text=clean(value);if(text.length<2||text.length>120||noisy(text))return"";if(/\\b(job|role|position|company|description|responsibilities|qualifications|salary)\\b/i.test(text))return"";if(text.split(/\\s+/).length>8)return"";return text};const meta=(names,validator)=>{for(const name of names){const element=document.querySelector('meta[name="'+name+'"],meta[property="'+name+'"]');const value=validator(element&&element.getAttribute("content"));if(value)return value}return""};const firstText=(selectors,validator)=>{for(const selector of selectors){const elements=[...document.querySelectorAll(selector)].slice(0,10);for(const element of elements){const value=validator(element.innerText||element.textContent);if(value)return value}}return""};const nearLabel=(labels,validator)=>{const elements=[...document.querySelectorAll("body *")].slice(0,1500);const normalizedLabels=labels.map(label=>label.toLowerCase());for(const element of elements){const text=normalize(element.innerText||element.textContent);if(!text||text.length>220)continue;const lower=text.toLowerCase();for(const label of normalizedLabels){if(lower===label){const value=validator(element.nextElementSibling&&(element.nextElementSibling.innerText||element.nextElementSibling.textContent));if(value)return value}if(lower.startsWith(label+":")||lower.startsWith(label+" -")){const value=validator(text.slice(label.length+1));if(value)return value}}}return""};const titlePart=validator=>normalize(document.title).split(/\\s(?:\\||-|@|at)\\s|,/).map(clean).find(validator)||"";const bestCompany=()=>{const candidates=[];const add=value=>{const text=validCompany(value);if(text)candidates.push(text)};add(nearLabel(["Company","Employer","Organization","Hiring company"],validCompany));["job:company","company","employer","hiringOrganization"].forEach(name=>add(meta([name],validCompany)));['[data-testid*="company" i]','[data-test*="company" i]','[data-qa*="company" i]','[aria-label*="company" i]','[itemprop="hiringOrganization"]'].forEach(selector=>add(firstText([selector],validCompany)));add(titlePart(validCompany));try{const url=new URL(location.href);url.hostname.replace(/^www\\./,"").split(/[._-]|\\./).forEach(part=>add(decodeURIComponent(part).replace(/[-_]/g," ")))}catch(error){}return candidates.find(Boolean)||""};const jobIdFromUrl=()=>{try{const url=new URL(location.href);const params=["jobReferenceCode","id","jobId","jobID","reqId","requisitionId","wdjobreqid","referenceCode","jobReqId","job_id","requisition_id"];for(const param of params){const value=clean(url.searchParams.get(param));if(value)return value}const parts=url.pathname.split("/").filter(Boolean).reverse();for(const rawPart of parts){const part=decodeURIComponent(rawPart);const match=part.match(/_([A-Za-z0-9-]{4,})$/)||part.match(/\\b([A-Z]{1,5}[-_]\\d{3,})\\b/i)||part.match(/\\b(\\d{5,})\\b/)||part.match(/^((?=.*\\d)[A-Za-z0-9-]{6,})$/);if(match)return clean(match[1]||match[0])}}catch(error){}return""};const experience=()=>{const fromLabel=nearLabel(["Experience","Experience required","Required experience"],value=>clean(value));if(fromLabel)return fromLabel;const match=bodyText.match(/(\\d+\\s*-\\s*\\d+\\s*years|\\d+\\+?\\s*years|fresher|entry level)/i);return match?clean(match[0]):""};const workMode=()=>/\\bremote\\b/i.test(bodyText)?"Remote":/\\bhybrid\\b/i.test(bodyText)?"Hybrid":/\\bonsite\\b|\\bon-site\\b|\\bon site\\b/i.test(bodyText)?"On site":"";const skills=()=>{const fromLabel=nearLabel(["Skills","Required skills","Key skills","Technologies"],value=>clean(value));if(fromLabel)return fromLabel;const fromMeta=meta(["job:skills","skills","keywords"],value=>clean(value));if(fromMeta)return fromMeta;return["JavaScript","TypeScript","Java","Python","SQL","Selenium","Playwright","Cypress","Postman","API Testing","Manual Testing","Automation Testing","Regression Testing","Functional Testing","Jira","Agile","Scrum","React","Node.js","AWS","Azure"].filter(skill=>bodyText.toLowerCase().includes(skill.toLowerCase())).join(", ")};const params=new URLSearchParams({Job_link:location.href,Company:bestCompany(),Role:firstText(["h1",'[data-testid*="job-title" i]','[data-testid*="title" i]','[data-test*="job-title" i]','[aria-label*="job title" i]','[class*="job-title" i]','[class*="position-title" i]'],validRole)||nearLabel(["Job title","Title","Role","Position","Opening"],validRole)||meta(["job:title","og:title","twitter:title"],validRole)||titlePart(validRole),Location:firstText(['[data-testid*="job-location" i]','[data-testid*="location" i]','[data-test*="location" i]','[aria-label*="location" i]','[class*="job-location" i]','[class*="location" i]'],validLocation)||nearLabel(["Location","Job location","Work location","Office"],validLocation)||meta(["job:location","location"],validLocation),Exp_required:experience(),Job_id:nearLabel(["Job ID","Job Id","Job number","Job reference","Requisition ID","Req ID","Reference number"],value=>clean(value))||meta(["job:id","job:identifier","job:requisition","requisitionId","reqId"],value=>clean(value))||jobIdFromUrl(),Skills:skills(),Work_mode:workMode()});window.open("${TRACKER_URL}?"+params.toString(),"_blank")})()`;
 
 function isLocalTracker() {
@@ -605,10 +608,62 @@ function setStatusMessage(message, type)
   }
 }
 
+function clearStoredAccessKey() {
+  localStorage.removeItem(ACCESS_KEY_STORAGE_KEY);
+  localStorage.removeItem(ACCESS_KEY_SAVED_AT_KEY);
+}
+
+function getStoredAccessKey() {
+  const savedKey = localStorage.getItem(ACCESS_KEY_STORAGE_KEY);
+  const savedAt = Number(localStorage.getItem(ACCESS_KEY_SAVED_AT_KEY));
+  const isExpired = !savedAt || Date.now() - savedAt > ACCESS_KEY_EXPIRY_MS;
+
+  if (!savedKey || isExpired) {
+    clearStoredAccessKey();
+    return "";
+  }
+
+  return savedKey;
+}
+
+function rememberAccessKeyForSession(value) {
+  const key = String(value || "").trim();
+
+  if (!key) {
+    clearStoredAccessKey();
+    return;
+  }
+
+  localStorage.setItem(ACCESS_KEY_STORAGE_KEY, key);
+  localStorage.setItem(ACCESS_KEY_SAVED_AT_KEY, String(Date.now()));
+}
+
+function refreshAccessKeySession() {
+  const storedKey = getStoredAccessKey();
+
+  if (storedKey) {
+    localStorage.setItem(ACCESS_KEY_SAVED_AT_KEY, String(Date.now()));
+  }
+}
+
+const validStoredAccessKey = getStoredAccessKey();
+let accessKeyRestoredFromStorage = Boolean(validStoredAccessKey);
+let accessKeyEditedAfterRestore = false;
+
+if (validStoredAccessKey) {
+  accessKey.value = validStoredAccessKey;
+}
+
 form.addEventListener("input", function () {
   if (!saveButton.disabled) {
     setStatusMessage("", "");
   }
+
+  refreshAccessKeySession();
+});
+
+accessKey.addEventListener("input", function () {
+  accessKeyEditedAfterRestore = true;
 });
 
 jobLinkInput.addEventListener("input", function () 
@@ -631,6 +686,18 @@ togglePassword.addEventListener("click", function ()
   {
     event.preventDefault();
 
+    if (
+      accessKeyRestoredFromStorage &&
+      !accessKeyEditedAfterRestore &&
+      !getStoredAccessKey()
+    ) {
+      accessKey.value = "";
+      accessKeyRestoredFromStorage = false;
+      setStatusMessage("Access key session expired. Please enter the key again.", "error");
+      accessKey.focus();
+      return;
+    }
+
     saveButton.disabled = true;
     saveButton.innerText = "Saving...";
     setStatusMessage("Saving job, please wait...", "");
@@ -650,8 +717,12 @@ togglePassword.addEventListener("click", function ()
        {
         setStatusMessage("Job saved successfully.", "success");
         const currentAccessKey = accessKey.value;
+        rememberAccessKeyForSession(currentAccessKey);
+        accessKeyRestoredFromStorage = true;
+        accessKeyEditedAfterRestore = false;
+
         event.target.reset();
-      accessKey.value = currentAccessKey;
+        accessKey.value = currentAccessKey;
       } else {
         setStatusMessage(result.message || "Failed to save job. Please check the details and try again.", "error");
       }
