@@ -5,7 +5,7 @@ Project currently under active development.
 Job Tracker Automation is a lightweight job-application tracker with three stable workflows:
 
 1. A hosted GitHub Pages web form for quick desktop or mobile entry.
-2. A one-time saved bookmarklet that extracts details from the current job page and opens the tracker in a new tab.
+2. A one-time saved bookmarklet that extracts details from the current job page and opens or reuses the tracker tab.
 3. Optional local Playwright tools for pasted-link extraction and terminal workflows.
 
 Hosted form: https://theblinder.github.io/job-tracker-automation/
@@ -17,7 +17,8 @@ Hosted form: https://theblinder.github.io/job-tracker-automation/
 - Keeps access-key validation in Google Apps Script instead of trusting browser-side checks.
 - Auto-fills the Job ID field from common job-link URL patterns.
 - Extracts visible job details through the saved bookmarklet without requiring localhost.
-- Opens the tracker in a new tab from the bookmarklet so the original job page stays open.
+- Opens or reuses a named tracker tab from the bookmarklet so the original job page stays open.
+- Uses portal-specific bookmarklet extraction for LinkedIn, Indeed, and Naukri before falling back to generic extraction.
 - Supports local Excel saving through the Playwright terminal flow.
 - Supports optional local Google Sheets append through the Google Sheets API.
 
@@ -61,10 +62,14 @@ After it is saved, use it like this:
 
 1. Open a job posting page.
 2. Click the saved `Extract Job` bookmark.
-3. The tracker opens in a new tab with extracted values in the form.
+3. The tracker opens, or the existing tracker tab is reused, with extracted values in the form.
 4. Review the fields before saving.
 
 The bookmarklet extracts only from details that are visible or available in the job page markup. If a field is uncertain, the safer behavior is to leave it blank instead of filling a wrong value.
+
+For LinkedIn, Indeed, and Naukri, the bookmarklet first looks inside the active job detail area instead of scanning the whole page. This avoids common wrong captures such as `LinkedIn` or `Naukri` as the company, or the first Indeed list card instead of the selected job. Naukri skill chips and tags are preserved as comma-separated skills when visible.
+
+The bookmarklet logs extraction sources for company, role, location, skills, and job ID in the job page console to make portal debugging easier.
 
 Some mobile browsers and job sites restrict bookmarklet execution, so desktop bookmarks are the most reliable path.
 
@@ -184,6 +189,7 @@ This provides a simpler manual-entry terminal flow.
 
 - Job detail detection depends on each job portal's URL format and page structure.
 - Bookmarklet extraction depends on details already being visible or present in the current job page.
+- LinkedIn, Indeed, and Naukri have portal-specific extraction, but page markup changes can still require selector updates.
 - Some sites block or limit bookmarklet access.
 - Pasted-link extraction requires the optional local Playwright server to be running.
 - The Playwright flow still needs manual review and correction.

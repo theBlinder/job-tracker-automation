@@ -133,7 +133,9 @@ const JOB_ID_URL_PARAMS = [
   "req_id",
   "jobid",
   "job-id",
-  "job_id"
+  "job_id",
+  "vjk",
+  "jk"
 ];
 
 const ATS_NOISE_TERMS = [
@@ -381,6 +383,231 @@ function logExtraction(fieldName, result) {
   } else {
     console.log(`[extract] ${fieldName}: no confident value found`);
   }
+}
+
+function getPortalName(jobUrl) {
+  try {
+    const hostname = new URL(jobUrl).hostname.toLowerCase();
+
+    if (hostname.includes("linkedin.")) return "LinkedIn";
+    if (hostname.includes("indeed.")) return "Indeed";
+    if (hostname.includes("naukri.")) return "Naukri";
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function isBlockedPortalCompany(value, portalName) {
+  const text = cleanExtractedValue(value).toLowerCase();
+
+  if (portalName === "LinkedIn") return text === "linkedin";
+  if (portalName === "Naukri") return text === "naukri" || text === "naukri.com";
+
+  return false;
+}
+
+function isConfidentPortalCompany(value, portalName) {
+  return isConfidentCompany(value) && !isBlockedPortalCompany(value, portalName);
+}
+
+async function getPortalRootSelector(page, portalName) {
+  const rootSelectors = {
+    LinkedIn: [
+      ".job-details-jobs-unified-top-card",
+      ".jobs-unified-top-card",
+      ".jobs-search__job-details--container",
+      ".jobs-details",
+      ".job-view-layout",
+      "main"
+    ],
+    Indeed: [
+      "#jobsearch-ViewjobPaneWrapper",
+      "#vjs-container",
+      "[data-testid='jobsearch-JobComponent']",
+      ".jobsearch-JobComponent",
+      "main"
+    ],
+    Naukri: [
+      ".styles_jd-container__",
+      "[class*='jd-container']",
+      "[class*='job-desc']",
+      "[class*='jobDetails']",
+      "main"
+    ]
+  };
+
+  for (const selector of rootSelectors[portalName] || []) {
+    const isVisible = await page.locator(selector).first().evaluate(element => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.visibility !== "hidden" &&
+        style.display !== "none" &&
+        rect.width > 0 &&
+        rect.height > 0;
+    }).catch(() => false);
+
+    if (isVisible) {
+      return selector;
+    }
+  }
+
+  return "";
+}
+
+async function getFirstVisibleSelectorTextInRoot(page, rootSelector, selectors, isConfidentValue) {
+  if (!rootSelector) {
+    return { value: "", source: "" };
+  }
+
+  for (const selector of selectors) {
+    try {
+      const values = await page.evaluate(({ rootCssSelector, cssSelector }) => {
+        const root = document.querySelector(rootCssSelector);
+        if (!root) return [];
+
+        return Array.from(root.querySelectorAll(cssSelector))
+          .slice(0, 12)
+          .filter(element => {
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.visibility !== "hidden" &&
+              style.display !== "none" &&
+              rect.width > 0 &&
+              rect.height > 0;
+          })
+          .map(element => element.innerText || element.textContent || "");
+      }, { rootCssSelector: rootSelector, cssSelector: selector });
+
+      for (const candidate of values) {
+        const text = cleanExtractedValue(candidate);
+        if (isConfidentValue(text)) {
+          return { value: text, source: `${rootSelector} ${selector}` };
+        }
+      }
+    } catch {
+      // Portal DOMs can change often; continue through the priority list.
+    }
+  }
+
+  return { value: "", source: "" };
+}
+
+async function getPortalField(page, jobUrl, fieldName) {
+  const portalName = getPortalName(jobUrl);
+  const rootSelector = await getPortalRootSelector(page, portalName);
+
+  if (!portalName || !rootSelector) {
+    return { value: "", source: "" };
+  }
+
+  const selectorMap = {
+    LinkedIn: {
+      company: [
+        ".job-details-jobs-unified-top-card__company-name a",
+        ".jobs-unified-top-card__company-name a",
+        ".jobs-unified-top-card__primary-description a",
+        ".job-details-jobs-unified-top-card__primary-description a"
+      ],
+      role: [
+        ".job-details-jobs-unified-top-card__job-title h1",
+        ".jobs-unified-top-card__job-title h1",
+        ".job-details-jobs-unified-top-card__job-title",
+        "h1"
+      ],
+      location: [
+        ".job-details-jobs-unified-top-card__tertiary-description-container span",
+        ".jobs-unified-top-card__bullet",
+        ".jobs-unified-top-card__primary-description span"
+      ]
+    },
+    Indeed: {
+      company: [
+        "[data-testid='inlineHeader-companyName']",
+        "[data-company-name='true']",
+        ".jobsearch-JobInfoHeader-companyName",
+        ".jobsearch-InlineCompanyRating div"
+      ],
+      role: [
+        "[data-testid='jobsearch-JobInfoHeader-title']",
+        "h1.jobsearch-JobInfoHeader-title",
+        "h1"
+      ],
+      location: [
+        "[data-testid='job-location']",
+        "[data-testid='inlineHeader-companyLocation']",
+        ".jobsearch-JobInfoHeader-subtitle div"
+      ]
+    },
+    Naukri: {
+      company: [
+        ".styles_jd-header-comp-name__MvqAI a",
+        "[class*='comp-name'] a",
+        "[class*='company'] a",
+        "[class*='comp-name']",
+        "[class*='companyName']"
+      ],
+      role: [
+        ".styles_jd-header-title__rZwM1",
+        "[class*='jd-header-title']",
+        "h1"
+      ],
+      location: [
+        "[class*='location'] a",
+        "[class*='loc'] a",
+        "[class*='location']",
+        "[class*='loc']"
+      ]
+    }
+  };
+
+  if (fieldName === "skills" && portalName === "Naukri") {
+    const values = await page.evaluate(rootCssSelector => {
+      const root = document.querySelector(rootCssSelector);
+      if (!root) return [];
+
+      return Array.from(root.querySelectorAll(
+        "[class*='skill' i] a, [class*='skill' i] span, [class*='key-skill' i] a, [class*='key-skill' i] span, [class*='tag' i] a, [class*='tag' i] span"
+      ))
+        .filter(element => {
+          const style = window.getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return style.visibility !== "hidden" &&
+            style.display !== "none" &&
+            rect.width > 0 &&
+            rect.height > 0;
+        })
+        .map(element => element.innerText || element.textContent || "");
+    }, rootSelector).catch(() => []);
+
+    const skills = dedupeValues(values)
+      .filter(value => value.length >= 2 && value.length <= 40)
+      .filter(value => !isNoiseLine(value))
+      .slice(0, 30)
+      .join(", ");
+
+    return skills
+      ? { value: skills, source: `${portalName} active detail skills/tags` }
+      : { value: "", source: "" };
+  }
+
+  const validators = {
+    company: value => isConfidentPortalCompany(value, portalName),
+    role: isConfidentRole,
+    location: isConfidentLocation
+  };
+
+  const selectors = selectorMap[portalName] && selectorMap[portalName][fieldName];
+  if (!selectors || !validators[fieldName]) {
+    return { value: "", source: "" };
+  }
+
+  const result = await getFirstVisibleSelectorTextInRoot(page, rootSelector, selectors, validators[fieldName]);
+
+  return result.value
+    ? { value: result.value, source: `${portalName} active detail: ${result.source}` }
+    : result;
 }
 
 async function getFirstVisibleSelectorText(page, selectors, isConfidentValue) {
@@ -783,6 +1010,7 @@ function parseSkillsFromText(value) {
 
 async function extractRole(page, jobUrl, pageTitle, bodyText) {
   const attempts = [
+    () => getPortalField(page, jobUrl, "role"),
     () => getFirstVisibleSelectorText(page, GENERIC_SELECTORS.role, isConfidentRole),
     () => getMetaContent(page, META_NAMES.role, isConfidentRole),
     () => getVisibleTextNearLabels(page, FIELD_LABELS.role, isConfidentRole),
@@ -808,6 +1036,7 @@ async function extractRole(page, jobUrl, pageTitle, bodyText) {
 
 async function extractLocation(page, jobUrl, bodyText) {
   const attempts = [
+    () => getPortalField(page, jobUrl, "location"),
     () => getFirstVisibleSelectorText(page, GENERIC_SELECTORS.location, isConfidentLocation),
     () => getMetaContent(page, META_NAMES.location, isConfidentLocation),
     () => getVisibleTextNearLabels(page, FIELD_LABELS.location, isConfidentLocation),
@@ -831,7 +1060,9 @@ async function extractLocation(page, jobUrl, bodyText) {
 }
 
 async function extractCompany(page, jobUrl, pageTitle, bodyText) {
+  const portalName = getPortalName(jobUrl);
   const attempts = [
+    () => getPortalField(page, jobUrl, "company"),
     () => getFirstVisibleSelectorText(page, GENERIC_SELECTORS.company, isConfidentCompany),
     () => getMetaContent(page, META_NAMES.company, isConfidentCompany),
     () => getVisibleTextNearLabels(page, FIELD_LABELS.company, isConfidentCompany),
@@ -856,6 +1087,11 @@ async function extractCompany(page, jobUrl, pageTitle, bodyText) {
   for (const attempt of attempts) {
     const result = await attempt();
     if (result.value) {
+      if (isBlockedPortalCompany(result.value, portalName)) {
+        console.log(`[extract] Company: ${result.source} rejected portal name -> ${result.value}`);
+        continue;
+      }
+
       logExtraction("Company", result);
       return result.value;
     }
@@ -890,6 +1126,7 @@ async function extractJobId(page, jobUrl) {
 
 async function extractSkills(page, bodyText) {
   const attempts = [
+    async () => getPortalField(page, page.url(), "skills"),
     async () => {
       const result = await getFirstVisibleSelectorText(page, GENERIC_SELECTORS.skills, isConfidentSkills);
       const value = parseSkillsFromText(result.value);
